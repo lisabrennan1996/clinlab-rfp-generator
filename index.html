@@ -189,12 +189,12 @@ async function bootPyodide() {
   if (py) return py;
   await new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+    s.src = (window.PYODIDE_INDEX_URL || 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/') + 'pyodide.js';
     s.onload  = res;
     s.onerror = () => rej(new Error('Failed to load Pyodide. Check your network / CSP settings.'));
     document.head.appendChild(s);
   });
-  py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
+  py = await loadPyodide({ indexURL: window.PYODIDE_INDEX_URL || 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
   await py.loadPackage(['micropip', 'lxml']);
   await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
   py.FS.mkdir('/engine');
