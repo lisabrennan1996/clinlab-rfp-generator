@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Central Lab RFP Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0; padding: 24px;
+      background: #f3f2f1;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      border-radius: 4px;
+      box-shadow: 0 1.6px 3.6px rgba(0,0,0,.13), 0 .3px .9px rgba(0,0,0,.1);
+      padding: 28px 32px;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    h2 { margin: 0 0 4px; font-size: 20px; color: #323130; }
+    .subtitle { color: #605e5c; font-size: 13px; margin: 0 0 24px; }
+    label { display: block; font-size: 14px; font-weight: 600; color: #323130; margin-bottom: 4px; }
+    .field { margin-bottom: 16px; }
+    input[type=file] {
+      display: block;
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #8a8886;
+      border-radius: 2px;
+      font-size: 13px;
+      background: #fff;
+    }
+    input[type=file]:hover { border-color: #323130; }
+    fieldset {
+      border: 1px solid #edebe9;
+      border-radius: 2px;
+      padding: 12px 16px;
+      margin: 0 0 20px;
+    }
+    legend { font-weight: 600; font-size: 14px; color: #323130; padding: 0 4px; }
+    .check-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
+    .check-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+    .hint { font-size: 12px; color: #605e5c; margin: 8px 0 0; }
+    button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      background: #0078d4;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button:hover:not(:disabled) { background: #106ebe; }
+    button:disabled { background: #c8c6c4; cursor: not-allowed; }
+    #status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 2px;
+      font-size: 13px;
+      line-height: 1.5;
+      background: #f3f2f1;
+      color: #323130;
+      white-space: pre-wrap;
+      min-height: 42px;
+    }
+    #status.error { background: #fde7e9; color: #a4262c; }
+    #status.done  { background: #dff6dd; color: #107c10; }
+    .progress-bar {
+      height: 4px; background: #edebe9; border-radius: 2px; margin-top: 8px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: #0078d4; width: 0%;
+      transition: width .4s ease;
+    }
+    .lilly-badge {
+      text-align: center;
+      font-size: 11px;
+      color: #a19f9d;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>Central Lab RFP Generator</h2>
+  <p class="subtitle">All processing happens in your browser — no files leave your device.</p>
+
+  <div class="field">
+    <label for="f-protocol">Protocol PDF</label>
+    <input type="file" id="f-protocol" accept="application/pdf" />
+  </div>
+  <div class="field">
+    <label for="f-design">Design-elements PDF</label>
+    <input type="file" id="f-design" accept="application/pdf" />
+  </div>
+  <div class="field">
+    <label for="f-prev">Previous RFP PDF</label>
+    <input type="file" id="f-prev" accept="application/pdf" />
+  </div>
+  <div class="field">
+    <label for="f-template">Blank template .docx</label>
+    <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+  </div>
+
+  <fieldset>
+    <legend>Does this study involve…</legend>
+    <div class="check-row"><input type="checkbox" id="cb-dec" /><label for="cb-dec" style="font-weight:normal">Decentralized trials</label></div>
+    <div class="check-row"><input type="checkbox" id="cb-pi"  /><label for="cb-pi"  style="font-weight:normal">Penalties &amp; Incentives</label></div>
+    <div class="check-row"><input type="checkbox" id="cb-ap"  /><label for="cb-ap"  style="font-weight:normal">Anatomic Pathology / Histology</label></div>
+    <p class="hint">Pediatrics and the hepatic algorithm are derived automatically from the protocol/design.</p>
+  </fieldset>
+
+  <button id="btn-generate" disabled>Generate RFP</button>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+  <div id="status">Select all four files above to begin.</div>
+
+  <div class="lilly-badge">Eli Lilly and Company · Clinical Laboratory Sciences · For internal use only</div>
+</div>
+
+<script type="module">
+/* ─────────────────────────────────────────────────────────────────────────
+   Minimal module shim so liteparse_wasm.js (ES module) can run in a
+   classic browser page.  We do NOT use webpack here — we load it directly
+   as an ES module using a dynamic import() within the <script type="module">.
+   ───────────────────────────────────────────────────────────────────────── */
+
+const BASE = new URL('.', location.href).href.replace(/\/$/, '');
+
+// ── UI refs ───────────────────────────────────────────────────────────────
+const btn        = document.getElementById('btn-generate');
+const statusEl   = document.getElementById('status');
+const progressEl = document.getElementById('progress');
+const inputs     = ['f-protocol','f-design','f-prev','f-template'].map(id => document.getElementById(id));
+
+function setStatus(msg, cls='') {
+  statusEl.textContent = msg;
+  statusEl.className   = cls;
+}
+function setProgress(pct) {
+  progressEl.style.width = pct + '%';
+}
+
+// Enable the button only once all 4 files are chosen
+inputs.forEach(inp => inp.addEventListener('change', () => {
+  btn.disabled = !inputs.every(i => i.files && i.files[0]);
+}));
+
+// ── liteparse ─────────────────────────────────────────────────────────────
+let LiteParse = null;
+let liteparseInited = false;
+
+async function initLiteparse() {
+  if (liteparseInited) return;
+  const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
+  // web target: default export is the init fn; pass explicit wasm URL so
+  // it doesn't try import.meta.url (which differs when embedded in SP).
+  await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
+  LiteParse = mod.LiteParse;
+  liteparseInited = true;
+}
+
+async function liteparse(file) {
+  await initLiteparse();
+  const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
+  const bytes  = new Uint8Array(await file.arrayBuffer());
+  const result = await parser.parse(bytes);
+  const pages  = result.pages.map(p => ({
+    page: p.pageNumber, width: p.width, height: p.height,
+    text: p.items.map(i => i.text).join(' '),
+    textItems: p.items.map(i => ({
+      text: i.text, x: i.bbox[0], y: i.bbox[1],
+      width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
+    })),
+  }));
+  return result.text + '\n' + JSON.stringify({ pages }, null, 2);
+}
+
+// ── Pyodide ───────────────────────────────────────────────────────────────
+let py = null;
+
+async function bootPyodide() {
+  if (py) return py;
+  await new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+    s.onload  = res;
+    s.onerror = () => rej(new Error('Failed to load Pyodide. Check your network / CSP settings.'));
+    document.head.appendChild(s);
+  });
+  py = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' });
+  await py.loadPackage(['micropip', 'lxml']);
+  await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
+  py.FS.mkdir('/engine');
+  for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp']) {
+    const src = await (await fetch(`${BASE}/engine/${m}.py`)).text();
+    py.FS.writeFile(`/engine/${m}.py`, src);
+  }
+  py.runPython(`import sys; sys.path.insert(0, '/engine')`);
+  return py;
+}
+
+// ── Generate ──────────────────────────────────────────────────────────────
+btn.addEventListener('click', async () => {
+  const [protocolFile, designFile, prevFile, templateFile] = inputs.map(i => i.files[0]);
+  const answers = {
+    decentralized:       document.getElementById('cb-dec').checked,
+    penalties_incentives:document.getElementById('cb-pi').checked,
+    anatomic_pathology:  document.getElementById('cb-ap').checked,
+  };
+
+  btn.disabled = true;
+  setProgress(0);
+  try {
+    setStatus('Parsing PDFs…'); setProgress(10);
+    const [protocolMd, designMd, prevMd] = await Promise.all([
+      liteparse(protocolFile), liteparse(designFile), liteparse(prevFile),
+    ]);
+    setProgress(35);
+
+    setStatus('Loading Python runtime (first run ~30 s)…'); setProgress(40);
+    const pyEnv = await bootPyodide();
+    setProgress(65);
+
+    setStatus('Generating RFP…'); setProgress(70);
+    const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
+    pyEnv.FS.mkdirTree('/io/in');
+    pyEnv.FS.mkdirTree('/io/out');
+    pyEnv.FS.writeFile('/io/in/protocol.md',     protocolMd);
+    pyEnv.FS.writeFile('/io/in/design.md',       designMd);
+    pyEnv.FS.writeFile('/io/in/previous_rfp.md', prevMd);
+    pyEnv.FS.writeFile('/io/in/template.docx',   templateBytes);
+
+    pyEnv.runPython(`
+import os, importlib
+os.environ.update({
+  "RFP_INPUT_DIR":  "/io/in",
+  "RFP_OUTPUT_DIR": "/io/out",
+  "RFP_PROTOCOL":   "/io/in/protocol.md",
+  "RFP_DESIGN":     "/io/in/design.md",
+  "RFP_PREV":       "/io/in/previous_rfp.md",
+  "RFP_TEMPLATE":   "/io/in/template.docx",
+  "RFP_OUTDOC":     "/io/out/RFP.docx",
+  "RFP_REPORT":     "/io/out/report.md",
+  "RFP_ANSWERS":    ${JSON.stringify(JSON.stringify(answers))},
+})
+import populate_rfp
+importlib.reload(populate_rfp)
+`);
+    setProgress(90);
+
+    const docx   = pyEnv.FS.readFile('/io/out/RFP.docx');
+    const report = new TextDecoder().decode(pyEnv.FS.readFile('/io/out/report.md'));
+    const name   = `Central_Laboratory_RFP_${new Date().toISOString().slice(0,10)}.docx`;
+
+    // Trigger download
+    const blob = new Blob([docx], {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+
+    setProgress(100);
+    const filled   = (report.match(/\| filled/g)   || []).length;
+    const computed = (report.match(/\| computed/g) || []).length;
+    const review   = (report.match(/\| review/g)   || []).length;
+    setStatus(
+      `✅ Done — ${name} downloaded.\nCoverage: ${filled} filled · ${computed} computed · ${review} need review.\n\nReview the draft and fill report before sending to the vendor.`,
+      'done'
+    );
+  } catch (err) {
+    setStatus('❌ ' + (err?.message || String(err)), 'error');
+    setProgress(0);
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
