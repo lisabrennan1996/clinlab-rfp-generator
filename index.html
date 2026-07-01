@@ -318,7 +318,7 @@
   <h2>Central Lab RFP Generator</h2>
   <p class="subtitle">All processing happens in your browser — no files leave your device.</p>
 
-  <div class="drop-zone" data-input="f-protocol">
+  <div class="drop-zone" data-input="f-protocol" id="zone-protocol">
     <div class="drop-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -331,10 +331,10 @@
     <div class="drop-label">Protocol PDF<span class="drop-optional">optional</span></div>
     <div class="drop-hint">Drop PDF here or click to browse</div>
     <div class="drop-file"></div>
-    <input type="file" accept="application/pdf" />
+    <input type="file" id="f-protocol" accept="application/pdf" />
   </div>
 
-  <div class="drop-zone" data-input="f-design">
+  <div class="drop-zone" data-input="f-design" id="zone-design">
     <div class="drop-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -347,10 +347,10 @@
     <div class="drop-label">Design Elements PDF<span class="drop-optional">optional</span></div>
     <div class="drop-hint">Drop PDF here or click to browse</div>
     <div class="drop-file"></div>
-    <input type="file" accept="application/pdf" />
+    <input type="file" id="f-design" accept="application/pdf" />
   </div>
 
-  <div class="drop-zone" data-input="f-prev">
+  <div class="drop-zone" data-input="f-prev" id="zone-prev">
     <div class="drop-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -363,10 +363,10 @@
     <div class="drop-label">Previous RFP PDF<span class="drop-optional">optional</span></div>
     <div class="drop-hint">Drop PDF here or click to browse</div>
     <div class="drop-file"></div>
-    <input type="file" accept="application/pdf" />
+    <input type="file" id="f-prev" accept="application/pdf" />
   </div>
 
-  <div class="drop-zone" data-input="f-template">
+  <div class="drop-zone" data-input="f-template" id="zone-template">
     <div class="drop-icon">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -379,7 +379,7 @@
     <div class="drop-label">Blank Template .docx<span class="drop-required">required</span></div>
     <div class="drop-hint">Drop .docx here or click to browse</div>
     <div class="drop-file"></div>
-    <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+    <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
   </div>
 
   <fieldset>
