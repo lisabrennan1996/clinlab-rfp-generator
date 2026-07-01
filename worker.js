@@ -3,9 +3,9 @@
    Runs liteparse (PDF parsing) and Pyodide (Python engine) off the
    main thread so the browser tab never freezes.
    ───────────────────────────────────────────────────────────────────────── */
-import { LiteParse, default as initLiteparse } from './liteparse/liteparse_wasm.js';
-
 let liteparseReady = false;
+let LiteParse = null;
+let initLiteparse = null;
 let py = null;
 
 // Top-level error reporting
@@ -25,6 +25,10 @@ self.addEventListener('message', async (e) => {
       case 'parsePDF': {
         progress('Loading PDF parser…', 10);
         if (!liteparseReady) {
+          // Dynamic import so failures are caught by try-catch
+          const mod = await import('./liteparse/liteparse_wasm.js');
+          LiteParse = mod.LiteParse;
+          initLiteparse = mod.default;
           await initLiteparse('./liteparse/liteparse_wasm_bg.wasm');
           liteparseReady = true;
         }
