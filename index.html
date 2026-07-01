@@ -429,6 +429,16 @@
 </div>
 
 <script type="module">
+/* Catch any module errors so they're visible to the user */
+window.addEventListener('unhandledrejection', (e) => {
+  const el = document.getElementById('status');
+  if (el) { el.textContent = '❌ ' + (e.reason?.message || String(e.reason)); el.className = 'error'; }
+});
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('status');
+  if (el) { el.textContent = '❌ ' + (e.message || 'Unknown error'); el.className = 'error'; }
+});
+
 /* ─────────────────────────────────────────────────────────────────────────
    PWA — register service worker
    ───────────────────────────────────────────────────────────────────────── */
@@ -725,7 +735,7 @@ btnDl.addEventListener('click', () => {
 /* ─────────────────────────────────────────────────────────────────────────
    AI Agent — local transformer QA model
    ───────────────────────────────────────────────────────────────────────── */
-import { parseReviewFields, buildContext, loadModel, answerField } from './ai-assist.js';
+// ai-assist.js loaded dynamically below
 
 btnAi.addEventListener('click', async () => {
   if (genState.reviewFields.length === 0) return;
@@ -737,14 +747,17 @@ btnAi.addEventListener('click', async () => {
   aiProgBar.style.width = '0%';
 
   try {
+    // Dynamically import ai-assist — no static dependency
+    const ai = await import('./ai-assist.js');
+
     // Load model
-    await loadModel((pct) => {
+    await ai.loadModel((pct) => {
       aiProgBar.style.width = Math.round(pct * 100) + '%';
     });
     aiProgBar.style.width = '100%';
 
     // Build context from markdown
-    const context = buildContext(genState.protocolMd || '', genState.designMd || '', genState.prevMd || '');
+    const context = ai.buildContext(genState.protocolMd || '', genState.designMd || '', genState.prevMd || '');
     const overrides = {};
     const total = genState.reviewFields.length;
 
@@ -760,7 +773,7 @@ btnAi.addEventListener('click', async () => {
       cell.textContent = '…';
       cell.className = 'ai-result pending';
 
-      const result = await answerField(context, rf.field);
+      const result = await ai.answerField(context, rf.field);
 
       if (result && result.confidence > 0.15) {
         cell.textContent = result.value;
