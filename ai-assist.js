@@ -2,13 +2,14 @@
    ai-assist.js — Local QA model to fill engine gaps
    Runs only on fields the regex engine marked as "review".
    Uses Transformers.js (distilbert QA) entirely in-browser.
+   Loaded dynamically — never blocks the main app.
    ───────────────────────────────────────────────────────────────────────── */
-import { pipeline } from '@xenova/transformers';
+const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js';
+const MODEL_ID = 'Xenova/distilbert-base-uncased-distilled-squad';
 
 let qaPipe = null;
 let modelLoading = false;
 let modelReady = false;
-const modelId = 'Xenova/distilbert-base-uncased-distilled-squad';
 
 export function isModelReady() {
   return modelReady;
@@ -17,13 +18,14 @@ export function isModelReady() {
 export async function loadModel(onProgress) {
   if (modelReady) return;
   if (modelLoading) {
-    // Wait for the in-flight load
     while (!modelReady) await new Promise(r => setTimeout(r, 200));
     return;
   }
   modelLoading = true;
   try {
-    qaPipe = await pipeline('question-answering', modelId, {
+    // Dynamically import Transformers.js — no importmap needed
+    const { pipeline } = await import(TRANSFORMERS_URL);
+    qaPipe = await pipeline('question-answering', MODEL_ID, {
       progress_callback: (p) => {
         if (onProgress && p.status === 'download' && typeof p.total === 'number') {
           onProgress(p.loaded / p.total);
@@ -36,9 +38,7 @@ export async function loadModel(onProgress) {
   }
 }
 
-/* ─── Field → question mapping ───
-   Each "review" field from the report gets turned into a
-   natural-language question for the QA model.                    */
+/* ─── Field → question mapping ─── */
 function questionForField(fieldName) {
   const q = {
     'General Information — requestor phone':
@@ -49,7 +49,6 @@ function questionForField(fieldName) {
       'What date is the budget required?',
     'General Information — requestor contact':
       'Who is the requestor contact and what is their email?',
-    // Enrollment & countries
     'Planned Enrollment (total sites)':
       'How many total participants will be enrolled?',
     'Planned Enrollment (US sites)':
@@ -60,12 +59,10 @@ function questionForField(fieldName) {
       'How many countries are participating?',
     'Number of Sites':
       'How many sites are participating?',
-    // Timing
     'First Patient First Visit':
       'What is the first patient first visit date?',
     'Last Patient Last Visit':
       'What is the last patient last visit date?',
-    // Therapeutic area
     'Therapeutic Area':
       'What is the therapeutic area for this study?',
     'Compound':
@@ -90,7 +87,7 @@ export async function answerField(context, fieldName) {
       return { value: result.answer.trim(), confidence: result.score };
     }
   } catch {
-    // Model can fail on edge cases — skip
+    // skip
   }
   return null;
 }
@@ -100,7 +97,6 @@ export function parseReviewFields(reportText) {
   const results = [];
   const lines = reportText.split('\n');
   for (const line of lines) {
-    // Report format: | Field | Value | Source | Status |
     const parts = line.split('|').map(s => s.trim());
     if (parts.length >= 5 && parts[4] === 'review') {
       results.push({
