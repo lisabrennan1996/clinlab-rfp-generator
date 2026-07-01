@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFP Generator — Generate</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  margin: 0; padding: 0;
+  background: #f5f5f5; color: #1a1a1a;
+}
+.container { max-width: 640px; margin: 0 auto; padding: 24px 20px; }
+h1 { font-size: 22px; color: #c62828; margin: 0 0 2px; font-weight: 700; }
+p { color: #666; font-size: 14px; margin: 0 0 16px; }
+.steps {
+  display: flex; gap: 8px; margin-bottom: 20px;
+}
+.step {
+  flex: 1; text-align: center; padding: 8px; border-radius: 6px;
+  font-size: 13px; font-weight: 600;
+  background: #e0e0e0; color: #999;
+}
+.step.done { background: #2e7d32; color: #fff; }
+.step.active { background: #c62828; color: #fff; }
+
+/* Cards */
+.card {
+  background: #fff; border-radius: 8px; border: 1px solid #e0e0e0;
+  padding: 16px; margin-bottom: 14px;
+}
+.card-title {
+  font-weight: 600; font-size: 14px; margin-bottom: 10px; color: #333;
+}
+
+/* Checkboxes */
+.cb-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.cb-group label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; cursor: pointer; padding: 6px 10px;
+  background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px;
+  transition: all .15s;
+}
+.cb-group label:hover { border-color: #c62828; background: #fff5f5; }
+.cb-group input[type=checkbox] { accent-color: #c62828; }
+
+button {
+  display: block; width: 100%;
+  padding: 12px; font-size: 15px; font-weight: 600;
+  color: #fff; background: #212121;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: background .15s;
+  margin-top: 8px;
+}
+button:hover:not(:disabled) { background: #000; }
+button:disabled { background: #e0e0e0; color: #999; cursor: default; }
+button.primary { background: #c62828; }
+button.primary:hover:not(:disabled) { background: #b71c1c; }
+button.secondary { background: #fff; color: #212121; border: 1px solid #bdbdbd; }
+button.secondary:hover:not(:disabled) { background: #f5f5f5; }
+
+#progress-wrap {
+  margin: 12px 0; display: none;
+}
+.progress-bar {
+  height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; background: #c62828; width: 0%; transition: width .4s;
+}
+#progress-msg { font-size: 13px; color: #666; margin-top: 4px; }
+
+#log {
+  margin-top: 10px; padding: 12px; background: #fff;
+  border-radius: 6px; font-size: 13px; min-height: 40px;
+  color: #555; border: 1px solid #e0e0e0;
+  white-space: pre-wrap;
+}
+#log.done { background: #f1f8e9; border-color: #a5d6a7; color: #2e7d32; }
+#log.error { background: #ffebee; border-color: #ef9a9a; color: #c62828; }
+
+#review-section { display: none; margin-top: 8px; }
+.review-table {
+  width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 10px;
+}
+.review-table th {
+  text-align: left; padding: 8px; border-bottom: 2px solid #e0e0e0;
+  font-weight: 600; color: #666; font-size: 11px; text-transform: uppercase;
+}
+.review-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+.review-table .field-name { font-weight: 600; width: 35%; }
+.ai-result.found { color: #2e7d32; font-weight: 600; }
+.ai-result.missed { color: #999; }
+.ai-conf { font-size: 12px; color: #999; }
+
+#ai-progress { display: none; margin: 10px 0; padding: 12px; background: #fff; border-radius: 6px; border: 1px solid #e0e0e0; }
+#ai-progress .bar { height: 4px; background: #e0e0e0; border-radius: 2px; margin-top: 6px; overflow: hidden; }
+#ai-progress .fill { height: 100%; background: #212121; width: 0%; transition: width .3s; }
+#ai-msg { font-size: 13px; color: #666; }
+
+.back-link {
+  display: inline-block; font-size: 13px; color: #c62828;
+  text-decoration: none; margin-bottom: 12px; font-weight: 600;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="steps"><div class="step done">✓ 1. Upload PDFs</div><div class="step active">⚙️ 2. Generate RFP</div></div>
+<a class="back-link" href="index.html">← Back to Upload</a>
+<h1>Generate RFP</h1>
+<p>Configure options and generate your populated document.</p>
+
+<div class="card">
+<div class="card-title">Study Options</div>
+<div class="cb-group">
+<label><input type="checkbox" id="cb-dec"> Decentralized trials</label>
+<label><input type="checkbox" id="cb-pi"> Penalties & Incentives</label>
+<label><input type="checkbox" id="cb-ap"> Anatomic Pathology</label>
+</div>
+</div>
+
+<button class="primary" id="btn-gen">🚀 Generate RFP</button>
+
+<div id="progress-wrap">
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div id="progress-msg">Starting...</div>
+</div>
+
+<div id="log">Click Generate to start.</div>
+
+<div id="review-section">
+<h3 style="font-size:15px;margin:0 0 10px;color:#c62828;">🔍 Fields Needing Review</h3>
+<p style="font-size:13px;color:#666;margin:0 0 10px;">
+  The regex engine couldn't find these fields. Use the AI agent to search your documents.
+</p>
+<table class="review-table"><thead><tr><th>Field</th><th>AI Value</th><th>Confidence</th></tr></thead><tbody id="review-body"></tbody></table>
+
+<div id="ai-progress">
+  <div id="ai-msg">Loading AI model...</div>
+  <div class="bar"><div class="fill" id="ai-fill"></div></div>
+</div>
+
+<button id="btn-ai" class="secondary" style="display:none">🤖 Send to Agent (AI)</button>
+<button id="btn-dl" style="display:none">⬇ Download RFP</button>
+<button id="btn-dl-patched" class="secondary" style="display:none">⬇ Download AI-Enhanced RFP</button>
+</div>
+
+<script>
+async function waitForTask(tid) {
+  while (true) {
+    const s = await pywebview.api.task_status(tid);
+    if (s.status === 'done') return await pywebview.api.task_result(tid);
+    if (s.status === 'error') return await pywebview.api.task_result(tid);
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
+window.onload = async () => {
+  while (typeof pywebview === 'undefined') await new Promise(r => setTimeout(r, 100));
+  const api = pywebview.api;
+
+  const btnGen = document.getElementById('btn-gen');
+  const btnDl = document.getElementById('btn-dl');
+  const btnDlPatched = document.getElementById('btn-dl-patched');
+  const btnAi = document.getElementById('btn-ai');
+  const log = document.getElementById('log');
+  const pw = document.getElementById('progress-wrap');
+  const pf = document.getElementById('progress-fill');
+  const pm = document.getElementById('progress-msg');
+  const rs = document.getElementById('review-section');
+  const rb = document.getElementById('review-body');
+  const aiP = document.getElementById('ai-progress');
+  const aiM = document.getElementById('ai-msg');
+  const aiF = document.getElementById('ai-fill');
+
+  function setPct(p) { pf.style.width = p + '%'; }
+  function setLog(msg, cls) { log.textContent = msg; log.className = cls || ''; }
+
+  // ── Generate ──
+  btnGen.addEventListener('click', async () => {
+    btnGen.disabled = true; pw.style.display = 'block'; setPct(0);
+    rs.style.display = 'none'; btnDl.style.display = 'none';
+    btnDlPatched.style.display = 'none'; btnAi.style.display = 'none';
+
+    const answers = JSON.stringify({
+      decentralized: document.getElementById('cb-dec').checked,
+      penalties_incentives: document.getElementById('cb-pi').checked,
+      anatomic_pathology: document.getElementById('cb-ap').checked,
+    });
+
+    try {
+      setLog('Running RFP engine...', ''); setPct(10);
+      pm.textContent = 'Starting generation...';
+      
+      const tid = await api.start_generate(answers);
+      const r = await waitForTask(tid);
+      const genResult = r.result;
+
+      if (!genResult || !genResult.ok) {
+        setLog('Error: ' + ((genResult && genResult.error) || 'Generation failed'), 'error');
+        pm.textContent = 'Failed';
+        return;
+      }
+
+      setPct(100);
+      pm.textContent = 'Complete';
+      setLog(`Done: ${genResult.filled} filled · ${genResult.computed} computed · ${genResult.review} need review`, 'done');
+
+      // Show review section
+      rs.style.display = 'block';
+      if (genResult.reviewFields && genResult.reviewFields.length > 0) {
+        rb.innerHTML = genResult.reviewFields.map((f, i) =>
+          `<tr><td class="field-name">${f.field}</td><td class="ai-result missed" id="ai-r-${i}">—</td><td class="ai-conf" id="ai-c-${i}">—</td></tr>`
+        ).join('');
+        btnAi.style.display = 'block';
+      } else {
+        rb.innerHTML = '<tr><td colspan="3" style="color:#2e7d32;font-weight:600;padding:12px">✓ All fields filled by regex!</td></tr>';
+        btnAi.style.display = 'none';
+      }
+      btnDl.style.display = 'block';
+
+      // Store for AI agent
+      window.__genResult = genResult;
+
+    } catch (err) {
+      setLog('Error: ' + (err.message || err), 'error');
+      pm.textContent = 'Error';
+    } finally {
+      btnGen.disabled = false;
+    }
+  });
+
+  // ── Download ──
+  function downloadDocx(label) {
+    return async () => {
+      const r = await api.get_docx();
+      if (!r.ok) return;
+      const binary = atob(r.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = r.name.replace('.docx', label + '.docx');
+      a.click();
+    };
+  }
+  btnDl.addEventListener('click', downloadDocx(''));
+  btnDlPatched.addEventListener('click', downloadDocx('_AI_enhanced'));
+
+  // ── AI Agent ──
+  btnAi.addEventListener('click', async () => {
+    btnAi.disabled = true;
+    btnAi.textContent = '⏳ Loading AI model...';
+    aiP.style.display = 'block';
+    aiM.textContent = 'Loading AI model (first run ~30s, ~250 MB download)...';
+    aiF.style.width = '0%';
+
+    try {
+      // Load model
+      const loadTid = await api.start_agent_load();
+      const loadR = await waitForTask(loadTid);
+      if (!loadR.result || !loadR.result.ok) {
+        aiM.textContent = 'Error loading model: ' + (loadR.result?.error || 'Unknown');
+        btnAi.textContent = '🤖 Retry Agent';
+        btnAi.disabled = false;
+        return;
+      }
+      aiF.style.width = '100%';
+
+      // Process each review field
+      const fields = window.__genResult.reviewFields || [];
+      const overrides = {};
+      for (let i = 0; i < fields.length; i++) {
+        aiM.textContent = `Querying agent: "${fields[i].field}" (${i+1}/${fields.length})...`;
+        aiF.style.width = ((i / fields.length) * 100) + '%';
+
+        const ansTid = await api.start_agent_answer(fields[i].field);
+        const ansR = await waitForTask(ansTid);
+        const r = ansR.result;
+
+        const cell = document.getElementById('ai-r-' + i);
+        const confCell = document.getElementById('ai-c-' + i);
+        if (r.ok && r.value && r.confidence > 0.15) {
+          cell.textContent = r.value;
+          cell.className = 'ai-result found';
+          confCell.textContent = (r.confidence * 100).toFixed(0) + '%';
+          overrides[fields[i].field] = r.value;
+        } else {
+          cell.textContent = r.value || '— not found';
+          cell.className = 'ai-result missed';
+          confCell.textContent = r.ok && r.value ? (r.confidence * 100).toFixed(0) + '%' : '—';
+        }
+      }
+      aiF.style.width = '100%';
+
+      // Patch document with AI values
+      if (Object.keys(overrides).length > 0) {
+        aiM.textContent = `Patching ${Object.keys(overrides).length} field(s) into document...`;
+        const p = await api.agent_patch(JSON.stringify(overrides));
+        if (p.ok) {
+          aiM.textContent = `✓ Patched ${p.patched} field(s) into document.`;
+          btnDlPatched.style.display = 'block';
+        } else {
+          aiM.textContent = 'Patch failed: ' + (p.error || 'Unknown');
+        }
+      } else {
+        aiM.textContent = '✓ AI complete — no fields could be filled from documents.';
+      }
+    } catch (err) {
+      aiM.textContent = 'Error: ' + (err.message || err);
+    } finally {
+      btnAi.disabled = false;
+      btnAi.textContent = '🤖 Send to Agent (AI)';
+    }
+  });
+};
+</script>
+</body>
+</html>

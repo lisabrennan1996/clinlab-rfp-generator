@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFP Generator — Upload PDFs</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  margin: 0; padding: 0;
+  background: #f5f5f5; color: #1a1a1a;
+}
+.container { max-width: 640px; margin: 0 auto; padding: 24px 20px; }
+h1 { font-size: 22px; color: #c62828; margin: 0 0 2px; font-weight: 700; }
+.subtitle { color: #666; font-size: 14px; margin: 0 0 20px; }
+.steps {
+  display: flex; gap: 8px; margin-bottom: 20px; 
+  counter-reset: step;
+}
+.step {
+  flex: 1; text-align: center; padding: 8px; border-radius: 6px;
+  font-size: 13px; font-weight: 600;
+  background: #e0e0e0; color: #999;
+}
+.step.active { background: #c62828; color: #fff; }
+.step.done { background: #2e7d32; color: #fff; }
+
+/* Drop zones */
+.drop-zone {
+  border: 2px dashed #bdbdbd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: #fff;
+  position: relative;
+}
+.drop-zone:hover { border-color: #c62828; background: #fff5f5; }
+.drop-zone.dragover { border-color: #c62828; background: #ffebee; }
+.drop-zone.has-file { border-style: solid; border-color: #2e7d32; background: #f1f8e9; }
+.drop-zone.error { border-color: #c62828; background: #ffebee; }
+.drop-zone-label {
+  font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px;
+}
+.drop-zone-hint {
+  font-size: 12px; color: #999;
+}
+.drop-zone-status {
+  font-size: 13px; font-weight: 600; margin-top: 6px; min-height: 20px;
+}
+.drop-zone-status.done { color: #2e7d32; }
+.drop-zone-status.error { color: #c62828; }
+.drop-zone-status.working { color: #1565c0; }
+.drop-zone input[type=file] { display: none; }
+
+/* Template section */
+.template-zone {
+  border: 2px dashed #bdbdbd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: #fff;
+}
+.template-zone:hover { border-color: #212121; background: #f5f5f5; }
+.template-zone.has-file { border-style: solid; border-color: #c62828; background: #fff5f5; }
+.template-zone .drop-zone-status.done { color: #c62828; }
+
+button {
+  display: block; width: 100%;
+  padding: 12px; font-size: 15px; font-weight: 600;
+  color: #fff; background: #212121;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: background .15s;
+}
+button:hover:not(:disabled) { background: #000; }
+button:disabled { background: #e0e0e0; color: #999; cursor: default; }
+button.primary { background: #c62828; }
+button.primary:hover:not(:disabled) { background: #b71c1c; }
+
+#log {
+  margin-top: 12px; padding: 12px; background: #fff;
+  border-radius: 6px; font-size: 13px; min-height: 20px;
+  color: #555; border: 1px solid #e0e0e0;
+}
+.field-header {
+  font-weight: 600; font-size: 13px; color: #666;
+  margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .5px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="steps"><div class="step active">📄 1. Upload PDFs</div><div class="step">⚙️ 2. Generate RFP</div></div>
+<h1>Central Lab RFP Generator</h1>
+<p class="subtitle">Upload your study documents. PDFs are parsed automatically. All fields optional — work with what you have.</p>
+
+<div class="field-header">Study Documents</div>
+
+<div class="drop-zone" id="dz-protocol" onclick="document.getElementById('f-protocol').click()">
+  <span class="drop-zone-label">📋 Protocol / Protocol Amendment</span>
+  <span class="drop-zone-hint">Drop a PDF here or click to browse</span>
+  <div class="drop-zone-status" id="s-protocol"></div>
+  <input type="file" id="f-protocol" accept="application/pdf">
+</div>
+
+<div class="drop-zone" id="dz-design" onclick="document.getElementById('f-design').click()">
+  <span class="drop-zone-label">📐 Design Elements</span>
+  <span class="drop-zone-hint">Drop a PDF here or click to browse</span>
+  <div class="drop-zone-status" id="s-design"></div>
+  <input type="file" id="f-design" accept="application/pdf">
+</div>
+
+<div class="drop-zone" id="dz-prev" onclick="document.getElementById('f-prev').click()">
+  <span class="drop-zone-label">📁 Previous RFP (optional)</span>
+  <span class="drop-zone-hint">Drop a PDF here or click to browse</span>
+  <div class="drop-zone-status" id="s-prev"></div>
+  <input type="file" id="f-prev" accept="application/pdf">
+</div>
+
+<div class="field-header">RFP Template</div>
+
+<div class="template-zone" id="dz-template" onclick="document.getElementById('f-template').click()">
+  <span class="drop-zone-label">📄 Blank RFP Template (.docx)</span>
+  <span class="drop-zone-hint">The Word document with table structure to fill</span>
+  <div class="drop-zone-status" id="s-template"></div>
+  <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+</div>
+
+<div id="log">Ready. Upload PDFs to begin.</div>
+
+<div style="display:flex; gap:8px; margin-top: 12px;">
+  <button class="primary" id="btn-next" disabled>Next: Generate RFP →</button>
+</div>
+</div>
+
+<script>
+// ── Drag-and-drop helpers ──
+['protocol','design','prev','template'].forEach(id => {
+  const dz = document.getElementById('dz-' + id);
+  if (!dz) return;
+  const inp = document.getElementById('f-' + id);
+  if (!inp) return;
+
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length) {
+      inp.files = e.dataTransfer.files;
+      inp.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── Polling helper ──
+async function waitForTask(tid, statusEl, logEl, messagePrefix) {
+  while (true) {
+    const s = await pywebview.api.task_status(tid);
+    if (s.status === 'done') {
+      const r = await pywebview.api.task_result(tid);
+      return r;
+    }
+    if (s.status === 'error') {
+      const r = await pywebview.api.task_result(tid);
+      return r;
+    }
+    if (s.message && logEl) {
+      logEl.textContent = messagePrefix + s.message;
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+}
+
+window.onload = async () => {
+  while (typeof pywebview === 'undefined') await new Promise(r => setTimeout(r, 100));
+  const api = pywebview.api;
+  const btnNext = document.getElementById('btn-next');
+  const log = document.getElementById('log');
+
+  function setStatus(id, text, cls, fileName) {
+    const el = document.getElementById('s-' + id);
+    el.textContent = text;
+    el.className = 'drop-zone-status ' + (cls || '');
+    const dz = document.getElementById('dz-' + id);
+    if (dz) {
+      dz.classList.remove('has-file', 'error');
+      if (cls === 'done') dz.classList.add('has-file');
+      if (cls === 'error') dz.classList.add('error');
+    }
+  }
+
+  async function handleParse(fieldId, file) {
+    const label = { 'f-protocol': 'Protocol', 'f-design': 'Design', 'f-prev': 'Previous RFP' }[fieldId] || fieldId;
+    
+    setStatus(fieldId, '⏳ Parsing...', 'working');
+    log.textContent = `Parsing ${file.name}...`;
+    
+    const b64 = await readFileAsBase64(file);
+    const tid = await api.start_parse(fieldId, b64);
+    const result = await waitForTask(tid, null, log, `${label}: `);
+    
+    if (result.result && result.result.ok) {
+      const r = result.result;
+      setStatus(fieldId, `✓ ${r.engine} — ${r.chars.toLocaleString()} chars (${r.pages} pages)`, 'done', file.name);
+      log.textContent = `✓ ${file.name} parsed with ${r.engine}.`;
+    } else {
+      const err = (result.result && result.result.error) || 'Parsing failed';
+      setStatus(fieldId, `✗ ${err}`, 'error');
+      log.textContent = `Error parsing ${file.name}: ${err}`;
+    }
+    updateNextButton();
+  }
+
+  async function handleTemplate(file) {
+    setStatus('template', '⏳ Loading...', 'working');
+    log.textContent = `Loading template ${file.name}...`;
+    const b64 = await readFileAsBase64(file);
+    const r = await api.upload_template(b64, file.name);
+    if (r.ok) {
+      setStatus('template', `✓ ${file.name} (${(r.size / 1024).toFixed(1)} KB)`, 'done', file.name);
+      log.textContent = `✓ Template loaded: ${file.name}`;
+    } else {
+      setStatus('template', `✗ ${r.error}`, 'error');
+      log.textContent = `Error: ${r.error}`;
+    }
+    updateNextButton();
+  }
+
+  function updateNextButton() {
+    // Enable if at least one document has been parsed OR template loaded
+    const anyDone = ['s-protocol', 's-design', 's-prev'].some(id => {
+      const el = document.getElementById(id);
+      return el && el.classList.contains('done');
+    });
+    const tmplDone = document.getElementById('s-template').classList.contains('done');
+    btnNext.disabled = !(anyDone || tmplDone);
+  }
+
+  // File input handlers
+  ['f-protocol','f-design','f-prev'].forEach(id => {
+    const inp = document.getElementById(id);
+    inp.addEventListener('change', () => {
+      if (inp.files[0]) handleParse(id, inp.files[0]);
+    });
+  });
+
+  document.getElementById('f-template').addEventListener('change', function() {
+    if (this.files[0]) handleTemplate(this.files[0]);
+  });
+
+  btnNext.addEventListener('click', () => {
+    window.location.href = 'generate.html';
+  });
+};
+</script>
+</body>
+</html>

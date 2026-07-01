@@ -1,0 +1,13 @@
+# Core
+liteparse>=2.4.0
+pywebview>=6.0
+PyMuPDF>=1.23
+python-docx>=1.0
+
+# AI Agent (optional - comment out if not needed)
+transformers>=4.30
+torch>=2.0
+sentencepiece>=0.1
+
+# Build
+pyinstaller>=6.0
