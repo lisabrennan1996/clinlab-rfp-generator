@@ -8,20 +8,31 @@ import { LiteParse, default as initLiteparse } from './liteparse/liteparse_wasm.
 let liteparseReady = false;
 let py = null;
 
+// Top-level error reporting
+self.addEventListener('error', (e) => {
+  self.postMessage({ id: -1, type: 'error', error: e.message || 'Uncaught worker error' });
+});
+
 self.addEventListener('message', async (e) => {
   const { id, cmd, args } = e.data;
+  function progress(msg, pct) {
+    self.postMessage({ id, type: 'progress', msg, pct });
+  }
   try {
     let result;
     switch (cmd) {
 
       case 'parsePDF': {
+        progress('Loading PDF parser…', 10);
         if (!liteparseReady) {
           await initLiteparse('./liteparse/liteparse_wasm_bg.wasm');
           liteparseReady = true;
         }
+        progress('Parsing document…', 20);
         const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
         const bytes = new Uint8Array(args.data);
         const parsed = await parser.parse(bytes);
+        progress('Building result…', 30);
         const pages = parsed.pages.map(p => ({
           page: p.pageNumber, width: p.width, height: p.height,
           text: p.items.map(i => i.text).join(' '),
@@ -35,12 +46,13 @@ self.addEventListener('message', async (e) => {
       }
 
       case 'bootPyodide': {
+        progress('Loading Python runtime…', 30);
         importScripts('./pyodide/pyodide.js');
         py = await loadPyodide({ indexURL: './pyodide/' });
-        self.postMessage({ id, type: 'progress', msg: 'Installing packages…', pct: 40 });
+        progress('Installing packages…', 50);
         await py.loadPackage(['micropip', 'lxml']);
         await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
-        self.postMessage({ id, type: 'progress', msg: 'Loading engine…', pct: 60 });
+        progress('Loading engine…', 70);
         py.FS.mkdir('/engine');
         for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp','patch_docx']) {
           const resp = await fetch(`./engine/${m}.py`);
@@ -66,7 +78,7 @@ self.addEventListener('message', async (e) => {
       case 'readFile': {
         if (!py) throw new Error('Pyodide not booted');
         const data = py.FS.readFile(args.path);
-        result = data;  // Uint8Array — structured-cloned
+        result = data;
         break;
       }
 

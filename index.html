@@ -543,13 +543,24 @@ worker.onmessage = (e) => {
   else cb.resolve(result);
 };
 
-function callWorker(cmd, args = {}) {
+function callWorker(cmd, args = {}, timeoutMs = 180000) {
   return new Promise((resolve, reject) => {
     const id = ++_callId;
-    _callbacks.set(id, { resolve, reject });
+    const timer = setTimeout(() => {
+      _callbacks.delete(id);
+      reject(new Error('Worker timeout (' + cmd + ' after ' + (timeoutMs/1000) + 's)'));
+    }, timeoutMs);
+    _callbacks.set(id, {
+      resolve: (v) => { clearTimeout(timer); resolve(v); },
+      reject: (e) => { clearTimeout(timer); reject(e); }
+    });
     worker.postMessage({ id, cmd, args });
   });
 }
+
+worker.onerror = (e) => {
+  setStatus('\u274c Worker error: ' + (e.message || 'Unknown'), 'error');
+};
 
 async function parsePDF(file) {
   if (!file) return '';
@@ -592,18 +603,19 @@ btn.addEventListener('click', async () => {
   btn.disabled = true;
   setProgress(0);
   try {
-    setStatus('Parsing PDFs…', 'info'); setProgress(10);
-    const parseFile = (f) => f ? parsePDF(f) : '';
-    const [protocolMd, designMd, prevMd] = await Promise.all([
-      parseFile(protocolFile), parseFile(designFile), parseFile(prevFile),
-    ]);
-    setProgress(35);
+    setStatus('Parsing Protocol PDF…', 'info'); setProgress(10);
+    const protocolMd = protocolFile ? await parsePDF(protocolFile) : '';
+    setProgress(20);
+    const designMd = designFile ? await parsePDF(designFile) : '';
+    setProgress(30);
+    const prevMd = prevFile ? await parsePDF(prevFile) : '';
+    setProgress(40);
 
     setStatus('Loading Python runtime (first run ~30 s)…', 'info'); setProgress(40);
     await bootPyodide();
-    setProgress(65);
+    setProgress(55);
 
-    setStatus('Generating RFP…', 'info'); setProgress(70);
+    setStatus('Generating RFP…', 'info'); setProgress(65);
     const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
     await callWorker('mkdir', { path: '/io/in' });
     await callWorker('mkdir', { path: '/io/out' });
@@ -632,7 +644,7 @@ os.environ.update({
 import populate_rfp
 importlib.reload(populate_rfp)
 ` });
-    setProgress(90);
+    setProgress(95);
 
     const docxBytes = await callWorker('readFile', { path: '/io/out/RFP.docx' });
     const reportBytes = await callWorker('readFile', { path: '/io/out/report.md' });
