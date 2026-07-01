@@ -14,6 +14,9 @@ Rules:
     ops / design flags; profile = requestor; computed = derived dates.
 """
 import re, datetime, os, json
+from extractors import (protocol_number, compound, protocol_title, phase,
+    therapeutic_area, indication, enrollment, countries, min_age, is_oncology,
+    has_ici, immunogenicity, genetics_pgx, screen_fail_rate, analyze_appendix_2)
 from pathlib import Path
 import docx
 
@@ -46,40 +49,17 @@ def s1(text, pat, fl=0):
     m = re.search(pat, text, fl); return m.group(1).strip() if m else None
 
 # ---------------------------------------------------------------- extract
-alias    = s1(PT, r'Protocol Number:\s*([A-Z0-9][A-Z0-9\-]+)')
-compound = s1(PT, r'Compound:\s*(LY\d+)')
-title    = s1(PT, r'(A\s+Phase\s+\d.*?Distal Sensory Polyneuropathy\.?)', re.S)
-if title:
-    title = re.sub(r'Commented \[[^\]]*\]\s*:?\s*\w*', ' ', title)  # strip Word margin comments + body
-    title = re.sub(r'\bdesign element\b', ' ', title, flags=re.I)
-    title = re.sub(r'\s+', ' ', title).strip()
-phase    = (re.search(r'A\s+Phase\s+(\d+[A-Za-z]?)', PT) or [None, None])
-phase    = phase[1] if isinstance(phase, list) else (phase.group(1) if phase else None)
-ta       = s1(DT, r'Therapeutic Area:\s*([^\n]+)')
-ta       = ta.split('(')[0].strip().rstrip('.') if ta else None
+alias    = protocol_number(PT)
+compound = compound(PT)
+title    = protocol_title(PT)
+phase    = phase(PT)
+ta       = therapeutic_area(DT) or therapeutic_area(PT)
 
-def design_yesno(kw):
-    for m in re.finditer(re.escape(kw), DT, re.I):
-        am = re.search(r'\b(Yes|No)\b', DT[m.start():m.start()+400])
-        if am: return am.group(1)
-    return None
-immuno   = design_yesno('Is immunogenicity testing needed')
-genetics = design_yesno('collect Genetics/PGx')
+immuno   = immunogenicity(DT) or immunogenicity(PT)
+genetics = genetics_pgx(DT) or genetics_pgx(PT)
 
-# analyte appendix: real section = heading immediately followed by intro line
-start = re.search(r'Appendix 2:\s*Clinical Laboratory Tests\s*\n\s*The tests detailed', PT)
-analytes = None
-if start:
-    s = start.start()
-    nxt = re.search(r'\n\s*(Appendix [3-9]|10\.[3-9]\.)', PT[s+50:])
-    block = PT[s: s+50+nxt.start() if nxt else len(PT)]
-    # analyte list begins at the first panel header "Hematology  Assayed by..."
-    h = re.search(r'\nHematology\s+Assayed by', block)
-    body = block[h.start():] if h else block
-    drop = re.compile(r'(CONFIDENTIAL|Approved on .*GMT|J6V-MC-OIAH|Author and Content'
-                      r'|Commented \[|^\s*\d{1,3}\s*$|Clinical Laboratory Tests\s+Comments)')
-    analytes = [l.rstrip() for l in body.splitlines()
-                if l.strip() and not drop.search(l)]
+analyte_lines = analyze_appendix_2(PT)
+analytes = analyte_lines  # list of lines or None
 
 rec('General Information — requestor contact', 'Lisa Brennan, lisa.brennan@lilly.com', 'profile', 'filled')
 rec('General Information — requestor phone', None, 'profile', 'review')
@@ -97,14 +77,12 @@ rec('Date budget required', budget, 'computed (+10 business days)', 'computed')
 
 # ---- Enrollment & countries — sourced from PROTOCOL + DESIGN ELEMENTS only.
 #      (The completed RFP is a learning reference, NOT a generator input.)
-m = re.search(r'Approximately\s+(\d+)\s+participants\s+will\s+be\s+randomized', PT)
-ENROLLED = int(m.group(1)) if m else None                       # protocol sample size
-m = re.search(r'(\d+)\s*%\s+realized', DT)                      # design screen-fail figure
-SCREEN_FAIL_RATE = int(m.group(1)) / 100 if m else 0.30
+_enroll_val = enrollment(PT)
+ENROLLED = _enroll_val if _enroll_val is not None else None                       # protocol sample size
+SCREEN_FAIL_RATE = screen_fail_rate(DT)
 SCREENED = round(ENROLLED / (1 - SCREEN_FAIL_RATE)) if ENROLLED else None
 ED_RATE = 0.10                                                  # template assumption: ED = 10% randomized
-m = re.search(r'For this trial,\s*(.+?)\s+will be in scope', DT)
-COUNTRIES = [c.strip() for c in re.split(r',|\band\b', m.group(1)) if c.strip()] if m else []
+COUNTRIES = countries(DT)
 rec('Patients enrolled (randomized)', str(ENROLLED), 'protocol (sample size)',
     'filled' if ENROLLED else 'review')
 rec('Patients screened', f'{SCREENED} (enrolled / (1 - {SCREEN_FAIL_RATE:.0%}))',
@@ -114,14 +92,11 @@ rec('Countries in scope', ', '.join(COUNTRIES) or '—', 'design elements',
 
 # ---- Clinical determinations from PROTOCOL + DESIGN (pediatrics, oncology) ----
 # Pediatric population: from the protocol's minimum-age inclusion criterion.
-m = re.search(r'(?:must be |are )?at least\s+(\d{1,2})\s+years of age', PT, re.I) \
-    or re.search(r'aged?\s+(\d{1,2})\s*(?:to|through|-)\s*\d{1,2}\s*years', PT, re.I)
-MIN_AGE = int(m.group(1)) if m else None
+MIN_AGE = min_age(PT)
 IS_PEDIATRIC = None if MIN_AGE is None else (MIN_AGE < 18)   # None = undetermined -> keep section
 # Oncology: from the therapeutic area; ICI: scan protocol + design for checkpoint inhibitors.
-IS_ONCOLOGY = bool(re.search(r'oncolog|cancer|tumou?r|malignan|carcinoma', ta or '', re.I))
-HAS_ICI = bool(re.search(r'immune checkpoint inhibitor|checkpoint inhibitor|anti-?PD-?L?1|'
-                         r'pembrolizumab|nivolumab|atezolizumab|durvalumab|ipilimumab', PT + DT, re.I))
+IS_ONCOLOGY = is_oncology(PT + DT, ta)
+HAS_ICI = has_ici(PT + DT)
 HEPATIC_CALC = ('Non-oncology' if not IS_ONCOLOGY
                 else 'Oncology — with ICI' if HAS_ICI else 'Oncology — without ICI')
 rec('Pediatric population?',
