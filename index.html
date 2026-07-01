@@ -1,105 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Step 1: Upload & Parse — Central Lab RFP</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body {
-      font-family: "Segoe UI", Arial, sans-serif;
-      margin: 0; padding: 24px;
-      background: #fafafa; min-height: 100vh; color: #212121;
-    }
-    .card {
-      background: #fff; border-radius: 6px;
-      box-shadow: 0 1.6px 3.6px rgba(0,0,0,.1), 0 .3px .9px rgba(0,0,0,.08);
-      padding: 32px; max-width: 640px; margin: 0 auto;
-    }
-    .steps {
-      display: flex; gap: 8px; margin-bottom: 24px;
-    }
-    .step {
-      flex: 1; text-align: center; padding: 8px; border-radius: 4px;
-      font-size: 13px; font-weight: 600;
-    }
-    .step.active { background: #d32f2f; color: #fff; }
-    .step.inactive { background: #e0e0e0; color: #9e9e9e; }
-    h2 { margin: 0 0 4px; font-size: 22px; color: #d32f2f; }
-    .subtitle { color: #616161; font-size: 13px; margin: 0 0 20px; }
-
-    label { display: block; font-size: 14px; font-weight: 600; color: #212121; margin-bottom: 4px; }
-    .field { margin-bottom: 16px; }
-    input[type=file] {
-      display: block; width: 100%; padding: 8px;
-      border: 1px solid #bdbdbd; border-radius: 4px; font-size: 13px; background: #fff;
-    }
-    input[type=file]:hover { border-color: #212121; }
-    .file-status { font-size: 12px; margin-top: 2px; min-height: 18px; }
-    .file-status.parsing { color: #1565c0; }
-    .file-status.done { color: #2e7d32; font-weight: 600; }
-    .file-status.error { color: #c62828; }
-
-    button {
-      display: block; width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
-      color: #fff; background: #d32f2f; border: none; border-radius: 4px;
-      cursor: pointer; transition: background .15s;
-    }
-    button:hover:not(:disabled) { background: #b71c1c; }
-    button:disabled { background: #e0e0e0; color: #9e9e9e; cursor: not-allowed; }
-
-    #status { margin-top: 14px; padding: 12px 14px; border-radius: 4px; font-size: 13px; background: #f5f5f5; color: #212121; min-height: 20px; }
-    .footer { text-align: center; font-size: 11px; color: #bdbdbd; margin-top: 24px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RFP Generator — Upload</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; color: #222; }
+h2 { color: #d32f2f; }
+label { display: block; font-weight: 600; margin: 16px 0 4px; }
+input[type=file] { display: block; width: 100%; padding: 6px; }
+.file-status { font-size: 13px; margin-top: 2px; min-height: 20px; }
+.file-status.done { color: #2e7d32; font-weight: 600; }
+.file-status.error { color: #c62828; }
+button { display: block; width: 100%; padding: 12px; font-size: 16px; font-weight: 600; color: #fff; background: #d32f2f; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+button:disabled { background: #ccc; cursor: default; }
+#status { margin-top: 16px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 13px; min-height: 20px; }
+#status.error { background: #ffebee; color: #c62828; }
+</style>
 </head>
 <body>
-<div class="card">
-  <div class="steps">
-    <div class="step active">1. Upload & Parse</div>
-    <div class="step inactive">2. Generate RFP</div>
-  </div>
-  <h2>Central Lab RFP Generator</h2>
-  <p class="subtitle">Upload documents below. PDFs are parsed immediately.</p>
+<h2>Central Lab RFP Generator</h2>
+<p style="color:#666;font-size:14px">Upload PDFs — each is parsed immediately. Then click Next to generate.</p>
 
-  <div class="field">
-    <label for="f-protocol">Protocol PDF</label>
-    <input type="file" id="f-protocol" accept="application/pdf" />
-    <div class="file-status" id="s-protocol"></div>
-  </div>
-  <div class="field">
-    <label for="f-design">Design-elements PDF</label>
-    <input type="file" id="f-design" accept="application/pdf" />
-    <div class="file-status" id="s-design"></div>
-  </div>
-  <div class="field">
-    <label for="f-prev">Previous RFP PDF</label>
-    <input type="file" id="f-prev" accept="application/pdf" />
-    <div class="file-status" id="s-prev"></div>
-  </div>
-  <div class="field">
-    <label for="f-template">Blank template .docx (required)</label>
-    <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-    <div class="file-status" id="s-template"></div>
-  </div>
+<label for="f-protocol">Protocol PDF</label>
+<input type="file" id="f-protocol" accept="application/pdf">
+<div class="file-status" id="s-protocol"></div>
 
-  <div id="status">Upload a template .docx to continue.</div>
-  <button id="btn-next" disabled>Next: Generate RFP →</button>
-  <div class="footer">Eli Lilly and Company · Clinical Laboratory Sciences · For internal use only</div>
-</div>
+<label for="f-design">Design-elements PDF</label>
+<input type="file" id="f-design" accept="application/pdf">
+<div class="file-status" id="s-design"></div>
+
+<label for="f-prev">Previous RFP PDF</label>
+<input type="file" id="f-prev" accept="application/pdf">
+<div class="file-status" id="s-prev"></div>
+
+<label for="f-template">Blank template .docx <span style="color:#d32f2f">(required)</span></label>
+<input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+<div class="file-status" id="s-template"></div>
+
+<div id="status">Upload a template .docx to continue.</div>
+<button id="btn-next" disabled>Next: Generate RFP →</button>
 
 <script type="module">
-/* ── Step 1: Upload + Parse (clone of original working page) ── */
+// ── Original working liteparse pattern (identical to initial working version) ──
 const BASE = new URL('.', location.href).href.replace(/\/$/, '');
-const btnNext = document.getElementById('btn-next');
-const statusEl = document.getElementById('status');
 const STORAGE_KEY = 'rfp-gen-data';
 
-// Parsed data store
-const parsed = {};
-let templateData = null;
-let templateName = '';
-
-// ── Liteparse (same dynamic import as the original working page) ──
 let LiteParse = null;
 let liteparseInited = false;
 
@@ -111,8 +57,8 @@ async function initLiteparse() {
     LiteParse = mod.LiteParse;
     liteparseInited = true;
   } catch (err) {
-    const el = document.getElementById('status');
-    if (el) { el.textContent = 'Error loading PDF parser: ' + (err.message || err); el.style.color = '#c62828'; }
+    document.getElementById('status').textContent = 'ERROR loading PDF parser: ' + (err.message || err);
+    document.getElementById('status').className = 'error';
     throw err;
   }
 }
@@ -120,9 +66,9 @@ async function initLiteparse() {
 async function parsePDF(file) {
   await initLiteparse();
   const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
-  const bytes  = new Uint8Array(await file.arrayBuffer());
+  const bytes = new Uint8Array(await file.arrayBuffer());
   const result = await parser.parse(bytes);
-  const pages  = result.pages.map(p => ({
+  const pages = result.pages.map(p => ({
     page: p.pageNumber, width: p.width, height: p.height,
     text: p.items.map(i => i.text).join(' '),
     textItems: p.items.map(i => ({
@@ -133,8 +79,11 @@ async function parsePDF(file) {
   return result.text + '\n' + JSON.stringify({ pages }, null, 2);
 }
 
-// ── File inputs (same pattern as original) ──
-const inputs = ['f-protocol', 'f-design', 'f-prev', 'f-template'].map(id => document.getElementById(id));
+// ── State ──
+const parsed = {};
+let templateData = null;
+let templateName = '';
+
 const statuses = {
   'f-protocol': document.getElementById('s-protocol'),
   'f-design': document.getElementById('s-design'),
@@ -142,62 +91,40 @@ const statuses = {
   'f-template': document.getElementById('s-template'),
 };
 
-inputs.forEach(inp => {
+['f-protocol','f-design','f-prev','f-template'].forEach(id => {
+  const inp = document.getElementById(id);
   inp.addEventListener('change', async () => {
     const file = inp.files[0];
-    const id = inp.id;
-    const st = statuses[id];
-
-    if (!file) {
-      st.textContent = '';
-      if (id === 'f-template') { templateData = null; templateName = ''; }
-      btnNext.disabled = true;
-      return;
-    }
-
+    if (!file) return;
+    
     if (id === 'f-template') {
       templateData = await file.arrayBuffer();
       templateName = file.name;
-      st.textContent = '\u2713 Ready';
-      st.className = 'file-status done';
-      btnNext.disabled = false;
-      statusEl.textContent = 'Template loaded. You can also upload PDFs above.';
+      statuses[id].textContent = '\u2713 Ready';
+      statuses[id].className = 'file-status done';
+      document.getElementById('btn-next').disabled = false;
+      document.getElementById('status').textContent = 'Template loaded. You can also add PDFs above.';
       return;
     }
-
-    // PDF — parse immediately
-    st.textContent = '\u23f3 Parsing\u2026';
-    st.className = 'file-status parsing';
+    
+    statuses[id].textContent = '\u23f3 Parsing\u2026';
+    statuses[id].className = 'file-status';
     try {
       parsed[id] = await parsePDF(file);
-      st.textContent = '\u2713 Parsed';
-      st.className = 'file-status done';
-      statusEl.textContent = `${file.name} parsed.`;
+      statuses[id].textContent = '\u2713 Parsed (' + parsed[id].length + ' chars)';
+      statuses[id].className = 'file-status done';
     } catch (err) {
-      st.textContent = '\u2717 Failed: ' + (err.message || '');
-      st.className = 'file-status error';
-      statusEl.textContent = 'Parse failed for ' + file.name;
+      statuses[id].textContent = '\u2717 ' + (err.message || err);
+      statuses[id].className = 'file-status error';
     }
   });
 });
 
-// ── Navigate to Step 2 ──
-btnNext.addEventListener('click', () => {
-  const data = {
-    parsed,
-    templateBase64: arrayBufferToBase64(templateData),
-    templateName,
-  };
+document.getElementById('btn-next').addEventListener('click', () => {
+  const data = { parsed, templateBase64: btoa(String.fromCharCode(...new Uint8Array(templateData))), templateName };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   window.location.href = 'generate.html';
 });
-
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
-}
 </script>
 </body>
 </html>
