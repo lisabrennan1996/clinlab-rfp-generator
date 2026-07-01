@@ -3,597 +3,120 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Central Lab RFP Generator</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico" />
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#d32f2f" />
+  <title>Step 1: Upload & Parse — Central Lab RFP</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
       font-family: "Segoe UI", Arial, sans-serif;
       margin: 0; padding: 24px;
-      background: #fafafa;
-      min-height: 100vh;
-      color: #212121;
+      background: #fafafa; min-height: 100vh; color: #212121;
     }
     .card {
-      background: #fff;
-      border-radius: 6px;
+      background: #fff; border-radius: 6px;
       box-shadow: 0 1.6px 3.6px rgba(0,0,0,.1), 0 .3px .9px rgba(0,0,0,.08);
-      padding: 32px;
-      max-width: 640px;
-      margin: 0 auto;
+      padding: 32px; max-width: 640px; margin: 0 auto;
     }
-    h2 {
-      margin: 0 0 4px;
-      font-size: 22px;
-      color: #d32f2f;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .steps {
+      display: flex; gap: 8px; margin-bottom: 24px;
     }
-    h2::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 24px;
-      background: #d32f2f;
-      border-radius: 3px;
+    .step {
+      flex: 1; text-align: center; padding: 8px; border-radius: 4px;
+      font-size: 13px; font-weight: 600;
     }
-    .subtitle {
-      color: #616161;
-      font-size: 13px;
-      margin: 0 0 24px;
-    }
+    .step.active { background: #d32f2f; color: #fff; }
+    .step.inactive { background: #e0e0e0; color: #9e9e9e; }
+    h2 { margin: 0 0 4px; font-size: 22px; color: #d32f2f; }
+    .subtitle { color: #616161; font-size: 13px; margin: 0 0 20px; }
 
-    /* ── Drop zones ── */
-    .drop-zone {
-      border: 2px dashed #bdbdbd;
-      border-radius: 6px;
-      padding: 20px 16px;
-      margin-bottom: 14px;
-      text-align: center;
-      cursor: pointer;
-      transition: border-color .2s, background .2s;
-      position: relative;
+    label { display: block; font-size: 14px; font-weight: 600; color: #212121; margin-bottom: 4px; }
+    .field { margin-bottom: 16px; }
+    input[type=file] {
+      display: block; width: 100%; padding: 8px;
+      border: 1px solid #bdbdbd; border-radius: 4px; font-size: 13px; background: #fff;
     }
-    .drop-zone:hover { border-color: #d32f2f; background: #fff5f5; }
-    .drop-zone.drag-over { border-color: #d32f2f; background: #ffebee; border-style: solid; }
-    .drop-zone.has-file { border-color: #212121; border-style: solid; background: #fafafa; }
-    .drop-icon { color: #9e9e9e; margin-bottom: 6px; transition: color .2s; }
-    .drop-zone:hover .drop-icon { color: #d32f2f; }
-    .drop-zone.has-file .drop-icon { color: #212121; }
-    .drop-label { font-size: 14px; font-weight: 600; color: #212121; }
-    .drop-hint { font-size: 12px; color: #9e9e9e; margin-top: 2px; }
-    .drop-file {
-      font-size: 13px;
-      color: #d32f2f;
-      font-weight: 600;
-      margin-top: 6px;
-      display: none;
-      word-break: break-all;
-    }
-    .drop-zone.has-file .drop-hint { display: none; }
-    .drop-zone.has-file .drop-file { display: block; }
-    .drop-zone input[type=file] { display: none; }
-    .drop-required {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      color: #d32f2f;
-      background: #ffebee;
-      padding: 1px 7px;
-      border-radius: 3px;
-      margin-left: 6px;
-      vertical-align: middle;
-    }
-    .drop-optional {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 600;
-      color: #616161;
-      background: #f5f5f5;
-      padding: 1px 7px;
-      border-radius: 3px;
-      margin-left: 6px;
-      vertical-align: middle;
-    }
+    input[type=file]:hover { border-color: #212121; }
+    .file-status { font-size: 12px; margin-top: 2px; min-height: 18px; }
+    .file-status.parsing { color: #1565c0; }
+    .file-status.done { color: #2e7d32; font-weight: 600; }
+    .file-status.error { color: #c62828; }
 
-    /* ── Checkboxes ── */
-    fieldset {
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      padding: 14px 18px;
-      margin: 0 0 20px;
-    }
-    legend {
-      font-weight: 600;
-      font-size: 14px;
-      color: #212121;
-      padding: 0 4px;
-    }
-    .check-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 7px 0;
-      font-size: 14px;
-    }
-    .check-row input[type=checkbox] {
-      width: 16px; height: 16px;
-      accent-color: #d32f2f;
-      cursor: pointer;
-    }
-    .check-row label { font-weight: 400; margin: 0; cursor: pointer; }
-    .hint { font-size: 12px; color: #757575; margin: 8px 0 0; }
-
-    /* ── Button ── */
     button {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #fff;
-      background: #d32f2f;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background .15s;
+      display: block; width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+      color: #fff; background: #d32f2f; border: none; border-radius: 4px;
+      cursor: pointer; transition: background .15s;
     }
     button:hover:not(:disabled) { background: #b71c1c; }
-    button:active:not(:disabled) { background: #c62828; }
     button:disabled { background: #e0e0e0; color: #9e9e9e; cursor: not-allowed; }
-    .btn-secondary {
-      background: #fff;
-      color: #212121;
-      border: 1px solid #bdbdbd;
-    }
-    .btn-secondary:hover:not(:disabled) { background: #f5f5f5; border-color: #212121; }
-    .btn-ai {
-      background: #212121;
-    }
-    .btn-ai:hover:not(:disabled) { background: #000; }
 
-    /* ── Progress ── */
-    .progress-bar {
-      height: 4px;
-      background: #e0e0e0;
-      border-radius: 2px;
-      margin-top: 12px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: #d32f2f;
-      width: 0%;
-      transition: width .4s ease;
-    }
-    .progress-fill.ai {
-      background: #212121;
-    }
-
-    /* ── Status ── */
-    #status {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 4px;
-      font-size: 13px;
-      line-height: 1.5;
-      background: #f5f5f5;
-      color: #212121;
-      white-space: pre-wrap;
-      min-height: 42px;
-      border-left: 3px solid #e0e0e0;
-    }
-    #status.info { border-left-color: #d32f2f; }
-    #status.error { background: #ffebee; color: #c62828; border-left-color: #d32f2f; }
-    #status.done  { background: #e8f5e9; color: #2e7d32; border-left-color: #43a047; }
-    #status.ai-working { background: #e8eaf6; color: #283593; border-left-color: #283593; }
-
-    /* ── Results section ── */
-    #results-section {
-      display: none;
-      margin-top: 20px;
-      border-top: 1px solid #e0e0e0;
-      padding-top: 20px;
-    }
-    .summary-badges {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .badge {
-      flex: 1;
-      text-align: center;
-      padding: 10px 8px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1.4;
-    }
-    .badge .num { font-size: 22px; display: block; }
-    .badge.filled { background: #e8f5e9; color: #2e7d32; }
-    .badge.computed { background: #e3f2fd; color: #1565c0; }
-    .badge.review { background: #fff3e0; color: #e65100; }
-
-    /* ── Review fields table ── */
-    #review-panel {
-      display: none;
-      margin-bottom: 16px;
-    }
-    #review-panel h4 {
-      margin: 0 0 10px;
-      font-size: 14px;
-      color: #e65100;
-    }
-    .review-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      margin-bottom: 12px;
-    }
-    .review-table th {
-      text-align: left;
-      padding: 6px 8px;
-      border-bottom: 2px solid #e0e0e0;
-      font-weight: 600;
-      color: #616161;
-      font-size: 11px;
-      text-transform: uppercase;
-    }
-    .review-table td {
-      padding: 8px;
-      border-bottom: 1px solid #f5f5f5;
-      vertical-align: top;
-    }
-    .review-table .field-name { font-weight: 600; color: #212121; width: 35%; }
-    .review-table .ai-result { color: #283593; font-weight: 500; }
-    .review-table .ai-result.pending { color: #9e9e9e; font-style: italic; }
-    .review-table .ai-result.found { color: #2e7d32; }
-    .review-table .ai-result.missed { color: #e65100; }
-    .review-table .confidence { font-size: 12px; color: #757575; }
-    .review-table .confidence.high { color: #2e7d32; }
-    .review-table .confidence.med { color: #e65100; }
-    .review-table .confidence.low { color: #c62828; }
-
-    /* ── Action buttons ── */
-    .action-buttons {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .action-buttons button { width: auto; flex: 1; }
-
-    /* ── AI Model progress ── */
-    #ai-progress {
-      display: none;
-      margin: 10px 0;
-      padding: 10px 14px;
-      background: #f5f5f5;
-      border-radius: 4px;
-      font-size: 13px;
-      color: #616161;
-    }
-    #ai-progress .bar-wrap {
-      height: 4px;
-      background: #e0e0e0;
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-    #ai-progress .bar-fill {
-      height: 100%;
-      background: #212121;
-      width: 0%;
-      transition: width .3s;
-    }
-
-    /* ── Footer ── */
-    .footer {
-      text-align: center;
-      font-size: 11px;
-      color: #bdbdbd;
-      margin-top: 24px;
-    }
-    .install-badge {
-      text-align: center;
-      font-size: 11px;
-      color: #9e9e9e;
-      margin-top: 16px;
-    }
-    .install-badge a { color: #d32f2f; text-decoration: none; cursor: pointer; }
-    .install-badge a:hover { text-decoration: underline; }
-
-
-    .drop-status { font-size: 11px; margin-top: 4px; }
-    .drop-status.parsing { color: #1565c0; }
-    .drop-status.done { color: #2e7d32; }
-    .drop-status.error { color: #c62828; }
-    @media (max-width: 500px) {
-      body { padding: 12px; }
-      .card { padding: 20px; }
-      .summary-badges { flex-direction: column; }
-      .action-buttons { flex-direction: column; }
-    }
+    #status { margin-top: 14px; padding: 12px 14px; border-radius: 4px; font-size: 13px; background: #f5f5f5; color: #212121; min-height: 20px; }
+    .footer { text-align: center; font-size: 11px; color: #bdbdbd; margin-top: 24px; }
   </style>
 </head>
 <body>
 <div class="card">
+  <div class="steps">
+    <div class="step active">1. Upload & Parse</div>
+    <div class="step inactive">2. Generate RFP</div>
+  </div>
   <h2>Central Lab RFP Generator</h2>
-  <p class="subtitle">All processing happens in your browser — no files leave your device.</p>
+  <p class="subtitle">Upload documents below. PDFs are parsed immediately.</p>
 
-  <div class="drop-zone" data-input="f-protocol" id="zone-protocol">
-    <div class="drop-icon">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10 9 9 9 8 9"/>
-      </svg>
-    </div>
-    <div class="drop-label">Protocol PDF<span class="drop-optional">optional</span></div>
-    <div class="drop-hint">Drop PDF here or click to browse</div>
-    <div class="drop-file"></div>
+  <div class="field">
+    <label for="f-protocol">Protocol PDF</label>
     <input type="file" id="f-protocol" accept="application/pdf" />
+    <div class="file-status" id="s-protocol"></div>
   </div>
-
-  <div class="drop-zone" data-input="f-design" id="zone-design">
-    <div class="drop-icon">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10 9 9 9 8 9"/>
-      </svg>
-    </div>
-    <div class="drop-label">Design Elements PDF<span class="drop-optional">optional</span></div>
-    <div class="drop-hint">Drop PDF here or click to browse</div>
-    <div class="drop-file"></div>
+  <div class="field">
+    <label for="f-design">Design-elements PDF</label>
     <input type="file" id="f-design" accept="application/pdf" />
+    <div class="file-status" id="s-design"></div>
   </div>
-
-  <div class="drop-zone" data-input="f-prev" id="zone-prev">
-    <div class="drop-icon">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10 9 9 9 8 9"/>
-      </svg>
-    </div>
-    <div class="drop-label">Previous RFP PDF<span class="drop-optional">optional</span></div>
-    <div class="drop-hint">Drop PDF here or click to browse</div>
-    <div class="drop-file"></div>
+  <div class="field">
+    <label for="f-prev">Previous RFP PDF</label>
     <input type="file" id="f-prev" accept="application/pdf" />
+    <div class="file-status" id="s-prev"></div>
   </div>
-
-  <div class="drop-zone" data-input="f-template" id="zone-template">
-    <div class="drop-icon">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10 9 9 9 8 9"/>
-      </svg>
-    </div>
-    <div class="drop-label">Blank Template .docx<span class="drop-required">required</span></div>
-    <div class="drop-hint">Drop .docx here or click to browse</div>
-    <div class="drop-file"></div>
+  <div class="field">
+    <label for="f-template">Blank template .docx (required)</label>
     <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+    <div class="file-status" id="s-template"></div>
   </div>
 
-  <fieldset>
-    <legend>Does this study involve…</legend>
-    <div class="check-row"><input type="checkbox" id="cb-dec" /><label for="cb-dec">Decentralized trials</label></div>
-    <div class="check-row"><input type="checkbox" id="cb-pi"  /><label for="cb-pi">Penalties &amp; Incentives</label></div>
-    <div class="check-row"><input type="checkbox" id="cb-ap"  /><label for="cb-ap">Anatomic Pathology / Histology</label></div>
-    <p class="hint">Pediatrics and the hepatic algorithm are derived automatically from the protocol/design.</p>
-  </fieldset>
-
-  <button id="btn-generate">Generate RFP</button>
-  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-  <div id="status" class="info">Select at least a template .docx to start.</div>
-
-  <!-- Results section (shown after generation) -->
-  <div id="results-section">
-    <div class="summary-badges">
-      <div class="badge filled"><span class="num" id="badge-filled">0</span>filled</div>
-      <div class="badge computed"><span class="num" id="badge-computed">0</span>computed</div>
-      <div class="badge review"><span class="num" id="badge-review">0</span>need review</div>
-    </div>
-
-    <div id="review-panel">
-      <h4>⚑ Fields needing review — send to the local AI agent to fill gaps</h4>
-      <table class="review-table">
-        <thead><tr><th>Field</th><th>AI Result</th><th>Confidence</th></tr></thead>
-        <tbody id="review-body"></tbody>
-      </table>
-      <div id="ai-progress">
-        <span id="ai-progress-text">Loading AI model…</span>
-        <div class="bar-wrap"><div class="bar-fill" id="ai-progress-bar"></div></div>
-      </div>
-      <button id="btn-ai-assist" class="btn-ai">🤖 Send to Agent</button>
-    </div>
-
-    <div class="action-buttons">
-      <button id="btn-download" class="btn-secondary">⬇ Download As-Is</button>
-    </div>
-  </div>
-
-  <div class="install-badge" id="install-hint" style="display:none">
-    You can install this app for offline use:
-    <a href="#" id="install-btn">Install App</a>
-  </div>
-
+  <div id="status">Upload a template .docx to continue.</div>
+  <button id="btn-next" disabled>Next: Generate RFP →</button>
   <div class="footer">Eli Lilly and Company · Clinical Laboratory Sciences · For internal use only</div>
 </div>
 
 <script type="module">
-/* Catch any module errors so they're visible to the user */
-window.addEventListener('unhandledrejection', (e) => {
-  const el = document.getElementById('status');
-  if (el) { el.textContent = '❌ ' + (e.reason?.message || String(e.reason)); el.className = 'error'; }
-});
-window.addEventListener('error', (e) => {
-  const el = document.getElementById('status');
-  if (el) { el.textContent = '❌ ' + (e.message || 'Unknown error'); el.className = 'error'; }
-});
-
-/* ─────────────────────────────────────────────────────────────────────────
-   PWA — register service worker
-   ───────────────────────────────────────────────────────────────────────── */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
-  let installPrompt = null;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    installPrompt = e;
-    document.getElementById('install-hint').style.display = 'block';
-    document.getElementById('install-btn').addEventListener('click', async (ev) => {
-      ev.preventDefault();
-      if (installPrompt) {
-        installPrompt.prompt();
-        const result = await installPrompt.userChoice;
-        if (result.outcome === 'accepted') {
-          document.getElementById('install-hint').style.display = 'none';
-        }
-        installPrompt = null;
-      }
-    });
-  });
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   UI refs
-   ───────────────────────────────────────────────────────────────────────── */
-const btn        = document.getElementById('btn-generate');
-const statusEl   = document.getElementById('status');
-const progressEl = document.getElementById('progress');
-const resultsSec = document.getElementById('results-section');
-const reviewPanel = document.getElementById('review-panel');
-const reviewBody = document.getElementById('review-body');
-const btnAi     = document.getElementById('btn-ai-assist');
-const btnDl     = document.getElementById('btn-download');
-const aiProg    = document.getElementById('ai-progress');
-const aiProgText = document.getElementById('ai-progress-text');
-const aiProgBar = document.getElementById('ai-progress-bar');
-
-function setStatus(msg, cls = '') {
-  statusEl.textContent = msg;
-  statusEl.className   = cls;
-}
-function setProgress(pct) {
-  progressEl.style.width = pct + '%';
-}
-
-// Stored generated state
-let genState = { docxBytes: null, reportText: null, fileName: null, reviewFields: [], parsed: {} };
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Drag-and-drop zones
-   ───────────────────────────────────────────────────────────────────────── */
-document.querySelectorAll('.drop-zone').forEach((zone) => {
-  const input = zone.querySelector('input[type=file]');
-  const fileDisplay = zone.querySelector('.drop-file');
-  function showFile(file) {
-    if (file) { zone.classList.add('has-file'); fileDisplay.textContent = file.name; }
-    else { zone.classList.remove('has-file'); fileDisplay.textContent = ''; }
-  }
-  // Parsing status element
-  const statusEl = document.createElement('div');
-  statusEl.className = 'drop-status';
-  zone.appendChild(statusEl);
-
-  zone.addEventListener('click', () => input.click());
-  input.addEventListener('change', () => {
-    showFile(input.files[0]);
-    updateButton();
-    parseOnUpload(zone, input, statusEl);
-  });
-  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
-  zone.addEventListener('dragleave', () => { zone.classList.remove('drag-over'); });
-  zone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    zone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      input.files = e.dataTransfer.files;
-      input.dispatchEvent(new Event('change'));
-    }
-  });
-});
-
-function updateButton() {
-  const templateFile = document.getElementById('f-template').files[0];
-  btn.disabled = !templateFile;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Web Worker — runs liteparse + Pyodide off the main thread
-   ───────────────────────────────────────────────────────────────────────── */
+/* ── Step 1: Upload + Parse (clone of original working page) ── */
 const BASE = new URL('.', location.href).href.replace(/\/$/, '');
-const worker = new Worker(`${BASE}/worker.js`, { type: 'module' });
+const btnNext = document.getElementById('btn-next');
+const statusEl = document.getElementById('status');
+const STORAGE_KEY = 'rfp-gen-data';
 
-let _callId = 0;
-const _callbacks = new Map();
+// Parsed data store
+const parsed = {};
+let templateData = null;
+let templateName = '';
 
-worker.onmessage = (e) => {
-  const { id, result, error, type } = e.data;
-  if (type === 'progress') {
-    // Forward progress updates to the UI
-    setProgress(e.data.pct || 0);
-    if (e.data.msg) setStatus(e.data.msg, 'info');
-    return;
-  }
-  const cb = _callbacks.get(id);
-  if (!cb) return;
-  _callbacks.delete(id);
-  if (error) cb.reject(new Error(error));
-  else cb.resolve(result);
-};
-
-function callWorker(cmd, args = {}, timeoutMs = 180000) {
-  return new Promise((resolve, reject) => {
-    const id = ++_callId;
-    const timer = setTimeout(() => {
-      _callbacks.delete(id);
-      reject(new Error('Worker timeout (' + cmd + ' after ' + (timeoutMs/1000) + 's)'));
-    }, timeoutMs);
-    _callbacks.set(id, {
-      resolve: (v) => { clearTimeout(timer); resolve(v); },
-      reject: (e) => { clearTimeout(timer); reject(e); }
-    });
-    worker.postMessage({ id, cmd, args });
-  });
-}
-
-worker.onerror = (e) => {
-  setStatus('\u274c Worker error: ' + (e.message || 'Unknown'), 'error');
-};
-/* ─────────────────────────────────────────────────────────────────────────
-   Liteparse — WASM PDF parser (main thread, dynamic import)
-   Parsed immediately when a file is uploaded so the work is spread out.
-   ───────────────────────────────────────────────────────────────────────── */
+// ── Liteparse (same dynamic import as the original working page) ──
 let LiteParse = null;
 let liteparseInited = false;
 
+async function initLiteparse() {
+  if (liteparseInited) return;
+  const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
+  await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
+  LiteParse = mod.LiteParse;
+  liteparseInited = true;
+}
+
 async function parsePDF(file) {
-  if (!file) return '';
-  if (!liteparseInited) {
-    const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
-    await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
-    LiteParse = mod.LiteParse;
-    liteparseInited = true;
-  }
+  await initLiteparse();
   const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  const bytes  = new Uint8Array(await file.arrayBuffer());
   const result = await parser.parse(bytes);
-  const pages = result.pages.map(p => ({
+  const pages  = result.pages.map(p => ({
     page: p.pageNumber, width: p.width, height: p.height,
     text: p.items.map(i => i.text).join(' '),
     textItems: p.items.map(i => ({
@@ -604,289 +127,71 @@ async function parsePDF(file) {
   return result.text + '\n' + JSON.stringify({ pages }, null, 2);
 }
 
+// ── File inputs (same pattern as original) ──
+const inputs = ['f-protocol', 'f-design', 'f-prev', 'f-template'].map(id => document.getElementById(id));
+const statuses = {
+  'f-protocol': document.getElementById('s-protocol'),
+  'f-design': document.getElementById('s-design'),
+  'f-prev': document.getElementById('s-prev'),
+  'f-template': document.getElementById('s-template'),
+};
 
+inputs.forEach(inp => {
+  inp.addEventListener('change', async () => {
+    const file = inp.files[0];
+    const id = inp.id;
+    const st = statuses[id];
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Pyodide helper — communicates via Web Worker
-   ───────────────────────────────────────────────────────────────────────── */
-async function bootPyodide() {
-  return callWorker('bootPyodide');
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Generate — regex engine
-   ───────────────────────────────────────────────────────────────────────── */
-
-async function parseOnUpload(zone, input, statusEl) {
-  const file = input.files[0];
-  const field = zone.dataset.input;
-  if (!file || field === 'f-template') {
-    genState.parsed[field] = '';
-    statusEl.textContent = '';
-    return;
-  }
-  statusEl.textContent = window.PARSING_SYMBOL + ' Parsing…';
-  statusEl.className = 'drop-status parsing';
-  try {
-    const md = await parsePDF(file);
-    genState.parsed[field] = md;
-    statusEl.textContent = '\u2713 Parsed';
-    statusEl.className = 'drop-status done';
-  } catch (err) {
-    statusEl.textContent = '\u2717 Parse failed';
-    statusEl.className = 'drop-status error';
-    console.warn('Parse error for', field, err);
-  }
-}
-btn.addEventListener('click', async () => {
-  const protocolFile = document.getElementById('f-protocol').files[0];
-  const designFile   = document.getElementById('f-design').files[0];
-  const prevFile     = document.getElementById('f-prev').files[0];
-  const templateFile = document.getElementById('f-template').files[0];
-
-  if (!templateFile) {
-    setStatus('❌ Please select a blank template .docx file.', 'error');
-    return;
-  }
-
-  const answers = {
-    decentralized:       document.getElementById('cb-dec').checked,
-    penalties_incentives: document.getElementById('cb-pi').checked,
-    anatomic_pathology:  document.getElementById('cb-ap').checked,
-  };
-
-  // Reset results section
-  resultsSec.style.display = 'none';
-  reviewPanel.style.display = 'none';
-  btnAi.style.display = '';
-
-  btn.disabled = true;
-  setProgress(0);
-  try {
-    setStatus('Parsing Protocol PDF…', 'info'); setProgress(10);
-    const protocolMd = protocolFile ? await parsePDF(protocolFile) : '';
-    setProgress(20);
-    const designMd = designFile ? await parsePDF(designFile) : '';
-    setProgress(30);
-    const prevMd = prevFile ? await parsePDF(prevFile) : '';
-    setProgress(40);
-
-    setStatus('Loading Python runtime (first run ~30 s)…', 'info'); setProgress(40);
-    await bootPyodide();
-    setProgress(55);
-
-    setStatus('Generating RFP…', 'info'); setProgress(65);
-    const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
-    await callWorker('mkdir', { path: '/io/in' });
-    await callWorker('mkdir', { path: '/io/out' });
-    await callWorker('writeFile', { path: '/io/in/protocol.md', data: protocolMd });
-    await callWorker('writeFile', { path: '/io/in/design.md', data: designMd });
-    await callWorker('writeFile', { path: '/io/in/previous_rfp.md', data: prevMd });
-    await callWorker('writeFile', { path: '/io/in/template.docx', data: templateBytes });
-    // Store markdown for AI agent
-    genState.protocolMd = protocolMd;
-    genState.designMd   = designMd;
-    genState.prevMd     = prevMd;
-
-    await callWorker('runPython', { code: `
-import os, importlib
-os.environ.update({
-  "RFP_INPUT_DIR":  "/io/in",
-  "RFP_OUTPUT_DIR": "/io/out",
-  "RFP_PROTOCOL":   "/io/in/protocol.md",
-  "RFP_DESIGN":     "/io/in/design.md",
-  "RFP_PREV":       "/io/in/previous_rfp.md",
-  "RFP_TEMPLATE":   "/io/in/template.docx",
-  "RFP_OUTDOC":     "/io/out/RFP.docx",
-  "RFP_REPORT":     "/io/out/report.md",
-  "RFP_ANSWERS":    ${JSON.stringify(JSON.stringify(answers))},
-})
-import populate_rfp
-importlib.reload(populate_rfp)
-` });
-    setProgress(95);
-
-    const docxBytes = await callWorker('readFile', { path: '/io/out/RFP.docx' });
-    const reportBytes = await callWorker('readFile', { path: '/io/out/report.md' });
-    const docx   = new Uint8Array(docxBytes);
-    const report = new TextDecoder().decode(reportBytes);
-    const name   = `Central_Laboratory_RFP_${new Date().toISOString().slice(0, 10)}.docx`;
-
-    // Store state
-    genState.docxBytes   = docx;
-    genState.reportText  = report;
-    genState.fileName    = name;
-    
-    genState.reviewFields = parseReviewFields(report);
-
-    // Show results section
-    showResults(report);
-    setProgress(0);
-  } catch (err) {
-    setStatus('❌ ' + (err?.message || String(err)), 'error');
-    setProgress(0);
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Results display
-   ───────────────────────────────────────────────────────────────────────── */
-function parseReviewFields(reportText) {
-  const fields = [];
-  for (const line of reportText.split('\\n')) {
-    const parts = line.split('|').map(s => s.trim());
-    if (parts.length >= 5 && parts[4] === 'review') {
-      fields.push({ field: parts[1], currentValue: parts[2], source: parts[3] });
+    if (!file) {
+      st.textContent = '';
+      if (id === 'f-template') { templateData = null; templateName = ''; }
+      btnNext.disabled = true;
+      return;
     }
-  }
-  return fields;
-}
 
-function showResults(reportText) {
-  const filled   = (reportText.match(/\\| filled/g)   || []).length;
-  const computed = (reportText.match(/\\| computed/g) || []).length;
-  const review   = (reportText.match(/\\| review/g)   || []).length;
+    if (id === 'f-template') {
+      templateData = await file.arrayBuffer();
+      templateName = file.name;
+      st.textContent = '\u2713 Ready';
+      st.className = 'file-status done';
+      btnNext.disabled = false;
+      statusEl.textContent = 'Template loaded. You can also upload PDFs above.';
+      return;
+    }
 
-  document.getElementById('badge-filled').textContent   = filled;
-  document.getElementById('badge-computed').textContent = computed;
-  document.getElementById('badge-review').textContent   = review;
-
-  resultsSec.style.display = 'block';
-
-  if (review > 0) {
-    reviewPanel.style.display = 'block';
-    reviewBody.innerHTML = genState.reviewFields.map((rf, i) =>
-      '<tr>' +
-        '<td class="field-name">' + escHtml(rf.field) + '</td>' +
-        '<td class="ai-result pending" id="ai-cell-' + i + '">—</td>' +
-        '<td class="confidence" id="conf-cell-' + i + '">—</td>' +
-      '</tr>'
-    ).join('');
-  } else {
-    reviewPanel.style.display = 'none';
-    btnAi.style.display = 'none';
-  }
-
-  setStatus(
-    `✅ Generation complete.\\n${filled} filled · ${computed} computed · ${review} need review.`,
-    'done'
-  );
-}
-
-function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Download as-is
-   ───────────────────────────────────────────────────────────────────────── */
-btnDl.addEventListener('click', () => {
-  if (!genState.docxBytes) return;
-  const blob = new Blob([genState.docxBytes], {
-    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    // PDF — parse immediately
+    st.textContent = '\u23f3 Parsing\u2026';
+    st.className = 'file-status parsing';
+    try {
+      parsed[id] = await parsePDF(file);
+      st.textContent = '\u2713 Parsed';
+      st.className = 'file-status done';
+      statusEl.textContent = `${file.name} parsed.`;
+    } catch (err) {
+      st.textContent = '\u2717 Failed: ' + (err.message || '');
+      st.className = 'file-status error';
+      statusEl.textContent = 'Parse failed for ' + file.name;
+    }
   });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = genState.fileName;
-  a.click();
 });
 
-/* ─────────────────────────────────────────────────────────────────────────
-   AI Agent — local transformer QA model
-   ───────────────────────────────────────────────────────────────────────── */
-// ai-assist.js loaded dynamically below
-
-btnAi.addEventListener('click', async () => {
-  if (genState.reviewFields.length === 0) return;
-
-  btnAi.disabled = true;
-  btnAi.textContent = '⏳ Agent working…';
-  aiProg.style.display = 'block';
-  aiProgText.textContent = 'Loading AI model (first run ~30 s, ~80 MB download)…';
-  aiProgBar.style.width = '0%';
-
-  try {
-    // Dynamically import ai-assist — no static dependency
-    const ai = await import('./ai-assist.js');
-
-    // Load model
-    await ai.loadModel((pct) => {
-      aiProgBar.style.width = Math.round(pct * 100) + '%';
-    });
-    aiProgBar.style.width = '100%';
-
-    // Build context from markdown
-    const context = ai.buildContext(genState.protocolMd || '', genState.designMd || '', genState.prevMd || '');
-    const overrides = {};
-    const total = genState.reviewFields.length;
-
-    // Process each review field
-    for (let i = 0; i < total; i++) {
-      const rf = genState.reviewFields[i];
-      const cell = document.getElementById('ai-cell-' + i);
-      const confCell = document.getElementById('conf-cell-' + i);
-
-      aiProgText.textContent = `Field ${i + 1}/${total}: ${rf.field}…`;
-      aiProgBar.style.width = Math.round(((i) / total) * 100) + '%';
-
-      cell.textContent = '…';
-      cell.className = 'ai-result pending';
-
-      const result = await ai.answerField(context, rf.field);
-
-      if (result && result.confidence > 0.15) {
-        cell.textContent = result.value;
-        cell.className = 'ai-result found';
-        confCell.textContent = (result.confidence * 100).toFixed(0) + '%';
-        confCell.className = 'confidence ' + (result.confidence > 0.5 ? 'high' : result.confidence > 0.25 ? 'med' : 'low');
-        overrides[rf.field] = result.value;
-      } else {
-        cell.textContent = '— not found';
-        cell.className = 'ai-result missed';
-        confCell.textContent = result ? (result.confidence * 100).toFixed(0) + '%' : '—';
-        confCell.className = 'confidence low';
-      }
-    }
-
-    aiProgBar.style.width = '100%';
-    aiProgText.textContent = 'Patching document…';
-
-    // Patch the DOCX in the worker
-    if (Object.keys(overrides).length > 0) {
-      await callWorker('writeFile', { path: '/io/in/overrides.json', data: JSON.stringify(overrides) });
-      await callWorker('runPython', { code: `
-import json, sys
-sys.path.insert(0, '/engine')
-from patch_docx import patch_review_tokens
-with open('/io/in/overrides.json') as f:
-    overrides = json.load(f)
-n = patch_review_tokens('/io/out/RFP.docx', overrides, '/io/out/RFP_patched.docx')
-print(f'Patched {n} tokens')
-` });
-      const patched = await callWorker('readFile', { path: '/io/out/RFP_patched.docx' });
-      genState.docxBytes = new Uint8Array(patched);
-      aiProgText.textContent = `✅ Agent patched ${Object.keys(overrides).length} field(s).`;
-    } else {
-      aiProgText.textContent = '✅ Agent completed — no fields could be filled.';
-    }
-
-    setStatus(
-      `✅ AI assist complete. ${Object.keys(overrides).length} field(s) filled. Ready to download.`,
-      'done'
-    );
-
-    // Switch download button text
-    btnDl.textContent = '⬇ Download AI-Enhanced RFP';
-
-  } catch (err) {
-    aiProgText.textContent = '❌ AI agent error: ' + (err?.message || String(err));
-    setStatus('❌ AI agent failed: ' + (err?.message || String(err)), 'error');
-  } finally {
-    aiProg.style.display = 'none';
-    btnAi.disabled = false;
-    btnAi.textContent = '🤖 Send to Agent';
-  }
+// ── Navigate to Step 2 ──
+btnNext.addEventListener('click', () => {
+  const data = {
+    parsed,
+    templateBase64: arrayBufferToBase64(templateData),
+    templateName,
+  };
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  window.location.href = 'generate.html';
 });
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
 </script>
 </body>
 </html>
