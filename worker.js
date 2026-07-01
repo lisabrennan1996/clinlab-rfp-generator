@@ -1,14 +1,9 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   worker.js — Web Worker (module) for heavy operations
-   Runs liteparse (PDF parsing) and Pyodide (Python engine) off the
-   main thread so the browser tab never freezes.
+   worker.js — Web Worker (module) for Pyodide only
+   Liteparse PDF parsing is done on the main thread.
    ───────────────────────────────────────────────────────────────────────── */
-let liteparseReady = false;
-let LiteParse = null;
-let initLiteparse = null;
 let py = null;
 
-// Top-level error reporting
 self.addEventListener('error', (e) => {
   self.postMessage({ id: -1, type: 'error', error: e.message || 'Uncaught worker error' });
 });
@@ -22,41 +17,14 @@ self.addEventListener('message', async (e) => {
     let result;
     switch (cmd) {
 
-      case 'parsePDF': {
-        progress('Loading PDF parser…', 10);
-        if (!liteparseReady) {
-          // Dynamic import so failures are caught by try-catch
-          const mod = await import('./liteparse/liteparse_wasm.js');
-          LiteParse = mod.LiteParse;
-          initLiteparse = mod.default;
-          await initLiteparse('./liteparse/liteparse_wasm_bg.wasm');
-          liteparseReady = true;
-        }
-        progress('Parsing document…', 20);
-        const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
-        const bytes = new Uint8Array(args.data);
-        const parsed = await parser.parse(bytes);
-        progress('Building result…', 30);
-        const pages = parsed.pages.map(p => ({
-          page: p.pageNumber, width: p.width, height: p.height,
-          text: p.items.map(i => i.text).join(' '),
-          textItems: p.items.map(i => ({
-            text: i.text, x: i.bbox[0], y: i.bbox[1],
-            width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
-          })),
-        }));
-        result = parsed.text + '\n' + JSON.stringify({ pages }, null, 2);
-        break;
-      }
-
       case 'bootPyodide': {
-        progress('Loading Python runtime…', 30);
+        progress('Loading Python runtime\u2026', 10);
         importScripts('./pyodide/pyodide.js');
         py = await loadPyodide({ indexURL: './pyodide/' });
-        progress('Installing packages…', 50);
+        progress('Installing packages\u2026', 40);
         await py.loadPackage(['micropip', 'lxml']);
         await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
-        progress('Loading engine…', 70);
+        progress('Loading engine\u2026', 70);
         py.FS.mkdir('/engine');
         for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp','patch_docx']) {
           const resp = await fetch(`./engine/${m}.py`);

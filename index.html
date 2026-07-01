@@ -305,6 +305,11 @@
     .install-badge a { color: #d32f2f; text-decoration: none; cursor: pointer; }
     .install-badge a:hover { text-decoration: underline; }
 
+
+    .drop-status { font-size: 11px; margin-top: 4px; }
+    .drop-status.parsing { color: #1565c0; }
+    .drop-status.done { color: #2e7d32; }
+    .drop-status.error { color: #c62828; }
     @media (max-width: 500px) {
       body { padding: 12px; }
       .card { padding: 20px; }
@@ -487,7 +492,7 @@ function setProgress(pct) {
 }
 
 // Stored generated state
-let genState = { docxBytes: null, reportText: null, fileName: null, reviewFields: [] };
+let genState = { docxBytes: null, reportText: null, fileName: null, reviewFields: [], parsed: {} };
 
 /* ─────────────────────────────────────────────────────────────────────────
    Drag-and-drop zones
@@ -499,8 +504,17 @@ document.querySelectorAll('.drop-zone').forEach((zone) => {
     if (file) { zone.classList.add('has-file'); fileDisplay.textContent = file.name; }
     else { zone.classList.remove('has-file'); fileDisplay.textContent = ''; }
   }
+  // Parsing status element
+  const statusEl = document.createElement('div');
+  statusEl.className = 'drop-status';
+  zone.appendChild(statusEl);
+
   zone.addEventListener('click', () => input.click());
-  input.addEventListener('change', () => { showFile(input.files[0]); updateButton(); });
+  input.addEventListener('change', () => {
+    showFile(input.files[0]);
+    updateButton();
+    parseOnUpload(zone, input, statusEl);
+  });
   zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
   zone.addEventListener('dragleave', () => { zone.classList.remove('drag-over'); });
   zone.addEventListener('drop', (e) => {
@@ -561,12 +575,36 @@ function callWorker(cmd, args = {}, timeoutMs = 180000) {
 worker.onerror = (e) => {
   setStatus('\u274c Worker error: ' + (e.message || 'Unknown'), 'error');
 };
+/* ─────────────────────────────────────────────────────────────────────────
+   Liteparse — WASM PDF parser (main thread, dynamic import)
+   Parsed immediately when a file is uploaded so the work is spread out.
+   ───────────────────────────────────────────────────────────────────────── */
+let LiteParse = null;
+let liteparseInited = false;
 
 async function parsePDF(file) {
   if (!file) return '';
-  const buf = await file.arrayBuffer();
-  return callWorker('parsePDF', { data: buf });
+  if (!liteparseInited) {
+    const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
+    await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
+    LiteParse = mod.LiteParse;
+    liteparseInited = true;
+  }
+  const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const result = await parser.parse(bytes);
+  const pages = result.pages.map(p => ({
+    page: p.pageNumber, width: p.width, height: p.height,
+    text: p.items.map(i => i.text).join(' '),
+    textItems: p.items.map(i => ({
+      text: i.text, x: i.bbox[0], y: i.bbox[1],
+      width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
+    })),
+  }));
+  return result.text + '\n' + JSON.stringify({ pages }, null, 2);
 }
+
+
 
 /* ─────────────────────────────────────────────────────────────────────────
    Pyodide helper — communicates via Web Worker
@@ -578,6 +616,28 @@ async function bootPyodide() {
 /* ─────────────────────────────────────────────────────────────────────────
    Generate — regex engine
    ───────────────────────────────────────────────────────────────────────── */
+
+async function parseOnUpload(zone, input, statusEl) {
+  const file = input.files[0];
+  const field = zone.dataset.input;
+  if (!file || field === 'f-template') {
+    genState.parsed[field] = '';
+    statusEl.textContent = '';
+    return;
+  }
+  statusEl.textContent = window.PARSING_SYMBOL + ' Parsing…';
+  statusEl.className = 'drop-status parsing';
+  try {
+    const md = await parsePDF(file);
+    genState.parsed[field] = md;
+    statusEl.textContent = '\u2713 Parsed';
+    statusEl.className = 'drop-status done';
+  } catch (err) {
+    statusEl.textContent = '\u2717 Parse failed';
+    statusEl.className = 'drop-status error';
+    console.warn('Parse error for', field, err);
+  }
+}
 btn.addEventListener('click', async () => {
   const protocolFile = document.getElementById('f-protocol').files[0];
   const designFile   = document.getElementById('f-design').files[0];
