@@ -1,15 +1,14 @@
 @echo off
 REM Central Lab RFP Generator — one-time server launcher
-REM Run this once, install the PWA, then you can close this window.
-
 echo.
 echo   ====================================================
 echo     Central Lab RFP Generator
-echo     Starting server on http://localhost:8000
 echo.
-echo     Open the URL above in your browser.
-echo     Click Install when prompted to go offline.
-echo     Then close this window — it works offline.
+echo     Step 1: Open http://localhost:8000 in your browser
+echo     Step 2: Upload PDFs - they parse instantly
+echo     Step 3: Click "Next" - Generate RFP
+echo.
+echo     Close this window when done.
 echo   ====================================================
 echo.
 

@@ -105,10 +105,16 @@ let liteparseInited = false;
 
 async function initLiteparse() {
   if (liteparseInited) return;
-  const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
-  await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
-  LiteParse = mod.LiteParse;
-  liteparseInited = true;
+  try {
+    const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
+    await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
+    LiteParse = mod.LiteParse;
+    liteparseInited = true;
+  } catch (err) {
+    const el = document.getElementById('status');
+    if (el) { el.textContent = 'Error loading PDF parser: ' + (err.message || err); el.style.color = '#c62828'; }
+    throw err;
+  }
 }
 
 async function parsePDF(file) {
