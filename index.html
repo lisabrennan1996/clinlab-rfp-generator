@@ -4,86 +4,318 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Central Lab RFP Generator</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#d32f2f" />
+  <script type="importmap">
+  {
+    "imports": {
+      "@xenova/transformers": "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js"
+    }
+  }
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
       font-family: "Segoe UI", Arial, sans-serif;
       margin: 0; padding: 24px;
-      background: #f3f2f1;
+      background: #fafafa;
       min-height: 100vh;
+      color: #212121;
     }
     .card {
       background: #fff;
-      border-radius: 4px;
-      box-shadow: 0 1.6px 3.6px rgba(0,0,0,.13), 0 .3px .9px rgba(0,0,0,.1);
-      padding: 28px 32px;
-      max-width: 620px;
+      border-radius: 6px;
+      box-shadow: 0 1.6px 3.6px rgba(0,0,0,.1), 0 .3px .9px rgba(0,0,0,.08);
+      padding: 32px;
+      max-width: 640px;
       margin: 0 auto;
     }
-    h2 { margin: 0 0 4px; font-size: 20px; color: #323130; }
-    .subtitle { color: #605e5c; font-size: 13px; margin: 0 0 24px; }
-    label { display: block; font-size: 14px; font-weight: 600; color: #323130; margin-bottom: 4px; }
-    .field { margin-bottom: 16px; }
-    input[type=file] {
-      display: block;
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid #8a8886;
-      border-radius: 2px;
-      font-size: 13px;
-      background: #fff;
+    h2 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      color: #d32f2f;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    input[type=file]:hover { border-color: #323130; }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 24px;
+      background: #d32f2f;
+      border-radius: 3px;
+    }
+    .subtitle {
+      color: #616161;
+      font-size: 13px;
+      margin: 0 0 24px;
+    }
+
+    /* ── Drop zones ── */
+    .drop-zone {
+      border: 2px dashed #bdbdbd;
+      border-radius: 6px;
+      padding: 20px 16px;
+      margin-bottom: 14px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover { border-color: #d32f2f; background: #fff5f5; }
+    .drop-zone.drag-over { border-color: #d32f2f; background: #ffebee; border-style: solid; }
+    .drop-zone.has-file { border-color: #212121; border-style: solid; background: #fafafa; }
+    .drop-icon { color: #9e9e9e; margin-bottom: 6px; transition: color .2s; }
+    .drop-zone:hover .drop-icon { color: #d32f2f; }
+    .drop-zone.has-file .drop-icon { color: #212121; }
+    .drop-label { font-size: 14px; font-weight: 600; color: #212121; }
+    .drop-hint { font-size: 12px; color: #9e9e9e; margin-top: 2px; }
+    .drop-file {
+      font-size: 13px;
+      color: #d32f2f;
+      font-weight: 600;
+      margin-top: 6px;
+      display: none;
+      word-break: break-all;
+    }
+    .drop-zone.has-file .drop-hint { display: none; }
+    .drop-zone.has-file .drop-file { display: block; }
+    .drop-zone input[type=file] { display: none; }
+    .drop-required {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #d32f2f;
+      background: #ffebee;
+      padding: 1px 7px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .drop-optional {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #616161;
+      background: #f5f5f5;
+      padding: 1px 7px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Checkboxes ── */
     fieldset {
-      border: 1px solid #edebe9;
-      border-radius: 2px;
-      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 14px 18px;
       margin: 0 0 20px;
     }
-    legend { font-weight: 600; font-size: 14px; color: #323130; padding: 0 4px; }
-    .check-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 14px; }
-    .check-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
-    .hint { font-size: 12px; color: #605e5c; margin: 8px 0 0; }
+    legend {
+      font-weight: 600;
+      font-size: 14px;
+      color: #212121;
+      padding: 0 4px;
+    }
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 7px 0;
+      font-size: 14px;
+    }
+    .check-row input[type=checkbox] {
+      width: 16px; height: 16px;
+      accent-color: #d32f2f;
+      cursor: pointer;
+    }
+    .check-row label { font-weight: 400; margin: 0; cursor: pointer; }
+    .hint { font-size: 12px; color: #757575; margin: 8px 0 0; }
+
+    /* ── Button ── */
     button {
       display: block;
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       font-size: 15px;
       font-weight: 600;
       color: #fff;
-      background: #0078d4;
+      background: #d32f2f;
       border: none;
-      border-radius: 2px;
+      border-radius: 4px;
       cursor: pointer;
       transition: background .15s;
     }
-    button:hover:not(:disabled) { background: #106ebe; }
-    button:disabled { background: #c8c6c4; cursor: not-allowed; }
-    #status {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 2px;
-      font-size: 13px;
-      line-height: 1.5;
-      background: #f3f2f1;
-      color: #323130;
-      white-space: pre-wrap;
-      min-height: 42px;
+    button:hover:not(:disabled) { background: #b71c1c; }
+    button:active:not(:disabled) { background: #c62828; }
+    button:disabled { background: #e0e0e0; color: #9e9e9e; cursor: not-allowed; }
+    .btn-secondary {
+      background: #fff;
+      color: #212121;
+      border: 1px solid #bdbdbd;
     }
-    #status.error { background: #fde7e9; color: #a4262c; }
-    #status.done  { background: #dff6dd; color: #107c10; }
+    .btn-secondary:hover:not(:disabled) { background: #f5f5f5; border-color: #212121; }
+    .btn-ai {
+      background: #212121;
+    }
+    .btn-ai:hover:not(:disabled) { background: #000; }
+
+    /* ── Progress ── */
     .progress-bar {
-      height: 4px; background: #edebe9; border-radius: 2px; margin-top: 8px; overflow: hidden;
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      margin-top: 12px;
+      overflow: hidden;
     }
     .progress-fill {
-      height: 100%; background: #0078d4; width: 0%;
+      height: 100%;
+      background: #d32f2f;
+      width: 0%;
       transition: width .4s ease;
     }
-    .lilly-badge {
+    .progress-fill.ai {
+      background: #212121;
+    }
+
+    /* ── Status ── */
+    #status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      background: #f5f5f5;
+      color: #212121;
+      white-space: pre-wrap;
+      min-height: 42px;
+      border-left: 3px solid #e0e0e0;
+    }
+    #status.info { border-left-color: #d32f2f; }
+    #status.error { background: #ffebee; color: #c62828; border-left-color: #d32f2f; }
+    #status.done  { background: #e8f5e9; color: #2e7d32; border-left-color: #43a047; }
+    #status.ai-working { background: #e8eaf6; color: #283593; border-left-color: #283593; }
+
+    /* ── Results section ── */
+    #results-section {
+      display: none;
+      margin-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 20px;
+    }
+    .summary-badges {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .badge {
+      flex: 1;
+      text-align: center;
+      padding: 10px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .badge .num { font-size: 22px; display: block; }
+    .badge.filled { background: #e8f5e9; color: #2e7d32; }
+    .badge.computed { background: #e3f2fd; color: #1565c0; }
+    .badge.review { background: #fff3e0; color: #e65100; }
+
+    /* ── Review fields table ── */
+    #review-panel {
+      display: none;
+      margin-bottom: 16px;
+    }
+    #review-panel h4 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #e65100;
+    }
+    .review-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .review-table th {
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 2px solid #e0e0e0;
+      font-weight: 600;
+      color: #616161;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .review-table td {
+      padding: 8px;
+      border-bottom: 1px solid #f5f5f5;
+      vertical-align: top;
+    }
+    .review-table .field-name { font-weight: 600; color: #212121; width: 35%; }
+    .review-table .ai-result { color: #283593; font-weight: 500; }
+    .review-table .ai-result.pending { color: #9e9e9e; font-style: italic; }
+    .review-table .ai-result.found { color: #2e7d32; }
+    .review-table .ai-result.missed { color: #e65100; }
+    .review-table .confidence { font-size: 12px; color: #757575; }
+    .review-table .confidence.high { color: #2e7d32; }
+    .review-table .confidence.med { color: #e65100; }
+    .review-table .confidence.low { color: #c62828; }
+
+    /* ── Action buttons ── */
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .action-buttons button { width: auto; flex: 1; }
+
+    /* ── AI Model progress ── */
+    #ai-progress {
+      display: none;
+      margin: 10px 0;
+      padding: 10px 14px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #616161;
+    }
+    #ai-progress .bar-wrap {
+      height: 4px;
+      background: #e0e0e0;
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    #ai-progress .bar-fill {
+      height: 100%;
+      background: #212121;
+      width: 0%;
+      transition: width .3s;
+    }
+
+    /* ── Footer ── */
+    .footer {
       text-align: center;
       font-size: 11px;
-      color: #a19f9d;
-      margin-top: 20px;
+      color: #bdbdbd;
+      margin-top: 24px;
+    }
+    .install-badge {
+      text-align: center;
+      font-size: 11px;
+      color: #9e9e9e;
+      margin-top: 16px;
+    }
+    .install-badge a { color: #d32f2f; text-decoration: none; cursor: pointer; }
+    .install-badge a:hover { text-decoration: underline; }
+
+    @media (max-width: 500px) {
+      body { padding: 12px; }
+      .card { padding: 20px; }
+      .summary-badges { flex-direction: column; }
+      .action-buttons { flex-direction: column; }
     }
   </style>
 </head>
@@ -92,54 +324,157 @@
   <h2>Central Lab RFP Generator</h2>
   <p class="subtitle">All processing happens in your browser — no files leave your device.</p>
 
-  <div class="field">
-    <label for="f-protocol">Protocol PDF</label>
-    <input type="file" id="f-protocol" accept="application/pdf" />
+  <div class="drop-zone" data-input="f-protocol">
+    <div class="drop-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    </div>
+    <div class="drop-label">Protocol PDF<span class="drop-optional">optional</span></div>
+    <div class="drop-hint">Drop PDF here or click to browse</div>
+    <div class="drop-file"></div>
+    <input type="file" accept="application/pdf" />
   </div>
-  <div class="field">
-    <label for="f-design">Design-elements PDF</label>
-    <input type="file" id="f-design" accept="application/pdf" />
+
+  <div class="drop-zone" data-input="f-design">
+    <div class="drop-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    </div>
+    <div class="drop-label">Design Elements PDF<span class="drop-optional">optional</span></div>
+    <div class="drop-hint">Drop PDF here or click to browse</div>
+    <div class="drop-file"></div>
+    <input type="file" accept="application/pdf" />
   </div>
-  <div class="field">
-    <label for="f-prev">Previous RFP PDF</label>
-    <input type="file" id="f-prev" accept="application/pdf" />
+
+  <div class="drop-zone" data-input="f-prev">
+    <div class="drop-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    </div>
+    <div class="drop-label">Previous RFP PDF<span class="drop-optional">optional</span></div>
+    <div class="drop-hint">Drop PDF here or click to browse</div>
+    <div class="drop-file"></div>
+    <input type="file" accept="application/pdf" />
   </div>
-  <div class="field">
-    <label for="f-template">Blank template .docx</label>
-    <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+
+  <div class="drop-zone" data-input="f-template">
+    <div class="drop-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+        <polyline points="10 9 9 9 8 9"/>
+      </svg>
+    </div>
+    <div class="drop-label">Blank Template .docx<span class="drop-required">required</span></div>
+    <div class="drop-hint">Drop .docx here or click to browse</div>
+    <div class="drop-file"></div>
+    <input type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
   </div>
 
   <fieldset>
     <legend>Does this study involve…</legend>
-    <div class="check-row"><input type="checkbox" id="cb-dec" /><label for="cb-dec" style="font-weight:normal">Decentralized trials</label></div>
-    <div class="check-row"><input type="checkbox" id="cb-pi"  /><label for="cb-pi"  style="font-weight:normal">Penalties &amp; Incentives</label></div>
-    <div class="check-row"><input type="checkbox" id="cb-ap"  /><label for="cb-ap"  style="font-weight:normal">Anatomic Pathology / Histology</label></div>
+    <div class="check-row"><input type="checkbox" id="cb-dec" /><label for="cb-dec">Decentralized trials</label></div>
+    <div class="check-row"><input type="checkbox" id="cb-pi"  /><label for="cb-pi">Penalties &amp; Incentives</label></div>
+    <div class="check-row"><input type="checkbox" id="cb-ap"  /><label for="cb-ap">Anatomic Pathology / Histology</label></div>
     <p class="hint">Pediatrics and the hepatic algorithm are derived automatically from the protocol/design.</p>
   </fieldset>
 
-  <button id="btn-generate" disabled>Generate RFP</button>
+  <button id="btn-generate">Generate RFP</button>
   <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
-  <div id="status">Select all four files above to begin.</div>
+  <div id="status" class="info">Select at least a template .docx to start.</div>
 
-  <div class="lilly-badge">Eli Lilly and Company · Clinical Laboratory Sciences · For internal use only</div>
+  <!-- Results section (shown after generation) -->
+  <div id="results-section">
+    <div class="summary-badges">
+      <div class="badge filled"><span class="num" id="badge-filled">0</span>filled</div>
+      <div class="badge computed"><span class="num" id="badge-computed">0</span>computed</div>
+      <div class="badge review"><span class="num" id="badge-review">0</span>need review</div>
+    </div>
+
+    <div id="review-panel">
+      <h4>⚑ Fields needing review — send to the local AI agent to fill gaps</h4>
+      <table class="review-table">
+        <thead><tr><th>Field</th><th>AI Result</th><th>Confidence</th></tr></thead>
+        <tbody id="review-body"></tbody>
+      </table>
+      <div id="ai-progress">
+        <span id="ai-progress-text">Loading AI model…</span>
+        <div class="bar-wrap"><div class="bar-fill" id="ai-progress-bar"></div></div>
+      </div>
+      <button id="btn-ai-assist" class="btn-ai">🤖 Send to Agent</button>
+    </div>
+
+    <div class="action-buttons">
+      <button id="btn-download" class="btn-secondary">⬇ Download As-Is</button>
+    </div>
+  </div>
+
+  <div class="install-badge" id="install-hint" style="display:none">
+    You can install this app for offline use:
+    <a href="#" id="install-btn">Install App</a>
+  </div>
+
+  <div class="footer">Eli Lilly and Company · Clinical Laboratory Sciences · For internal use only</div>
 </div>
 
 <script type="module">
 /* ─────────────────────────────────────────────────────────────────────────
-   Minimal module shim so liteparse_wasm.js (ES module) can run in a
-   classic browser page.  We do NOT use webpack here — we load it directly
-   as an ES module using a dynamic import() within the <script type="module">.
+   PWA — register service worker
    ───────────────────────────────────────────────────────────────────────── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    document.getElementById('install-hint').style.display = 'block';
+    document.getElementById('install-btn').addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      if (installPrompt) {
+        installPrompt.prompt();
+        const result = await installPrompt.userChoice;
+        if (result.outcome === 'accepted') {
+          document.getElementById('install-hint').style.display = 'none';
+        }
+        installPrompt = null;
+      }
+    });
+  });
+}
 
-const BASE = new URL('.', location.href).href.replace(/\/$/, '');
-
-// ── UI refs ───────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────────────
+   UI refs
+   ───────────────────────────────────────────────────────────────────────── */
 const btn        = document.getElementById('btn-generate');
 const statusEl   = document.getElementById('status');
 const progressEl = document.getElementById('progress');
-const inputs     = ['f-protocol','f-design','f-prev','f-template'].map(id => document.getElementById(id));
+const resultsSec = document.getElementById('results-section');
+const reviewPanel = document.getElementById('review-panel');
+const reviewBody = document.getElementById('review-body');
+const btnAi     = document.getElementById('btn-ai-assist');
+const btnDl     = document.getElementById('btn-download');
+const aiProg    = document.getElementById('ai-progress');
+const aiProgText = document.getElementById('ai-progress-text');
+const aiProgBar = document.getElementById('ai-progress-bar');
 
-function setStatus(msg, cls='') {
+function setStatus(msg, cls = '') {
   statusEl.textContent = msg;
   statusEl.className   = cls;
 }
@@ -147,58 +482,92 @@ function setProgress(pct) {
   progressEl.style.width = pct + '%';
 }
 
-// Enable the button only once all 4 files are chosen
-inputs.forEach(inp => inp.addEventListener('change', () => {
-  btn.disabled = !inputs.every(i => i.files && i.files[0]);
-}));
+// Stored generated state
+let genState = { docxBytes: null, reportText: null, fileName: null, reviewFields: [] };
 
-// ── liteparse ─────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────────────
+   Drag-and-drop zones
+   ───────────────────────────────────────────────────────────────────────── */
+document.querySelectorAll('.drop-zone').forEach((zone) => {
+  const input = zone.querySelector('input[type=file]');
+  const fileDisplay = zone.querySelector('.drop-file');
+  function showFile(file) {
+    if (file) { zone.classList.add('has-file'); fileDisplay.textContent = file.name; }
+    else { zone.classList.remove('has-file'); fileDisplay.textContent = ''; }
+  }
+  zone.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => { showFile(input.files[0]); updateButton(); });
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      input.files = e.dataTransfer.files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+});
+
+function updateButton() {
+  const templateFile = document.getElementById('f-template').files[0];
+  btn.disabled = !templateFile;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Liteparse — WASM PDF parser
+   ───────────────────────────────────────────────────────────────────────── */
+const BASE = new URL('.', location.href).href.replace(/\/$/, '');
 let LiteParse = null;
 let liteparseInited = false;
 
 async function initLiteparse() {
   if (liteparseInited) return;
   const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
-  // web target: default export is the init fn; pass explicit wasm URL so
-  // it doesn't try import.meta.url (which differs when embedded in SP).
   await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
   LiteParse = mod.LiteParse;
   liteparseInited = true;
 }
 
-async function liteparse(file) {
+async function parsePDF(file) {
+  if (!file) return '';
   await initLiteparse();
   const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
   const bytes  = new Uint8Array(await file.arrayBuffer());
   const result = await parser.parse(bytes);
-  const pages  = result.pages.map(p => ({
-    page: p.pageNumber, width: p.width, height: p.height,
-    text: p.items.map(i => i.text).join(' '),
-    textItems: p.items.map(i => ({
-      text: i.text, x: i.bbox[0], y: i.bbox[1],
-      width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
+  return result.text + '\\n' + JSON.stringify({
+    pages: result.pages.map(p => ({
+      page: p.pageNumber, width: p.width, height: p.height,
+      text: p.items.map(i => i.text).join(' '),
+      textItems: p.items.map(i => ({
+        text: i.text, x: i.bbox[0], y: i.bbox[1],
+        width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
+      })),
     })),
-  }));
-  return result.text + '\n' + JSON.stringify({ pages }, null, 2);
+  }, null, 2);
 }
 
-// ── Pyodide ───────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────────────
+   Pyodide — Python in WASM
+   ───────────────────────────────────────────────────────────────────────── */
 let py = null;
 
 async function bootPyodide() {
   if (py) return py;
+  const indexURL = window.PYODIDE_INDEX_URL || './pyodide/';
   await new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = (window.PYODIDE_INDEX_URL || 'https://collab.lilly.com/sites/AutomatedBloodVolumeCLS/Shared%20Documents/pyotide-runtime/') + 'pyodide.js';
+    s.src = indexURL + 'pyodide.js';
     s.onload  = res;
     s.onerror = () => rej(new Error('Failed to load Pyodide. Check your network / CSP settings.'));
     document.head.appendChild(s);
   });
-  py = await loadPyodide({ indexURL: window.PYODIDE_INDEX_URL || 'https://collab.lilly.com/sites/AutomatedBloodVolumeCLS/Shared%20Documents/pyotide-runtime/' });
+  py = await loadPyodide({ indexURL });
   await py.loadPackage(['micropip', 'lxml']);
   await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
   py.FS.mkdir('/engine');
-  for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp']) {
+  for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp','patch_docx']) {
     const src = await (await fetch(`${BASE}/engine/${m}.py`)).text();
     py.FS.writeFile(`/engine/${m}.py`, src);
   }
@@ -206,29 +575,46 @@ async function bootPyodide() {
   return py;
 }
 
-// ── Generate ──────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────────────
+   Generate — regex engine
+   ───────────────────────────────────────────────────────────────────────── */
 btn.addEventListener('click', async () => {
-  const [protocolFile, designFile, prevFile, templateFile] = inputs.map(i => i.files[0]);
+  const protocolFile = document.getElementById('f-protocol').files[0];
+  const designFile   = document.getElementById('f-design').files[0];
+  const prevFile     = document.getElementById('f-prev').files[0];
+  const templateFile = document.getElementById('f-template').files[0];
+
+  if (!templateFile) {
+    setStatus('❌ Please select a blank template .docx file.', 'error');
+    return;
+  }
+
   const answers = {
     decentralized:       document.getElementById('cb-dec').checked,
-    penalties_incentives:document.getElementById('cb-pi').checked,
+    penalties_incentives: document.getElementById('cb-pi').checked,
     anatomic_pathology:  document.getElementById('cb-ap').checked,
   };
+
+  // Reset results section
+  resultsSec.style.display = 'none';
+  reviewPanel.style.display = 'none';
+  btnAi.style.display = '';
 
   btn.disabled = true;
   setProgress(0);
   try {
-    setStatus('Parsing PDFs…'); setProgress(10);
+    setStatus('Parsing PDFs…', 'info'); setProgress(10);
+    const parseFile = (f) => f ? parsePDF(f) : '';
     const [protocolMd, designMd, prevMd] = await Promise.all([
-      liteparse(protocolFile), liteparse(designFile), liteparse(prevFile),
+      parseFile(protocolFile), parseFile(designFile), parseFile(prevFile),
     ]);
     setProgress(35);
 
-    setStatus('Loading Python runtime (first run ~30 s)…'); setProgress(40);
+    setStatus('Loading Python runtime (first run ~30 s)…', 'info'); setProgress(40);
     const pyEnv = await bootPyodide();
     setProgress(65);
 
-    setStatus('Generating RFP…'); setProgress(70);
+    setStatus('Generating RFP…', 'info'); setProgress(70);
     const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
     pyEnv.FS.mkdirTree('/io/in');
     pyEnv.FS.mkdirTree('/io/out');
@@ -236,6 +622,10 @@ btn.addEventListener('click', async () => {
     pyEnv.FS.writeFile('/io/in/design.md',       designMd);
     pyEnv.FS.writeFile('/io/in/previous_rfp.md', prevMd);
     pyEnv.FS.writeFile('/io/in/template.docx',   templateBytes);
+    // Store markdown for AI agent
+    genState.protocolMd = protocolMd;
+    genState.designMd   = designMd;
+    genState.prevMd     = prevMd;
 
     pyEnv.runPython(`
 import os, importlib
@@ -257,30 +647,179 @@ importlib.reload(populate_rfp)
 
     const docx   = pyEnv.FS.readFile('/io/out/RFP.docx');
     const report = new TextDecoder().decode(pyEnv.FS.readFile('/io/out/report.md'));
-    const name   = `Central_Laboratory_RFP_${new Date().toISOString().slice(0,10)}.docx`;
+    const name   = `Central_Laboratory_RFP_${new Date().toISOString().slice(0, 10)}.docx`;
 
-    // Trigger download
-    const blob = new Blob([docx], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    a.click();
+    // Store state
+    genState.docxBytes   = docx;
+    genState.reportText  = report;
+    genState.fileName    = name;
+    genState.pyEnv       = pyEnv;
+    genState.reviewFields = parseReviewFields(report);
 
-    setProgress(100);
-    const filled   = (report.match(/\| filled/g)   || []).length;
-    const computed = (report.match(/\| computed/g) || []).length;
-    const review   = (report.match(/\| review/g)   || []).length;
-    setStatus(
-      `✅ Done — ${name} downloaded.\nCoverage: ${filled} filled · ${computed} computed · ${review} need review.\n\nReview the draft and fill report before sending to the vendor.`,
-      'done'
-    );
+    // Show results section
+    showResults(report);
+    setProgress(0);
   } catch (err) {
     setStatus('❌ ' + (err?.message || String(err)), 'error');
     setProgress(0);
   } finally {
     btn.disabled = false;
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Results display
+   ───────────────────────────────────────────────────────────────────────── */
+function parseReviewFields(reportText) {
+  const fields = [];
+  for (const line of reportText.split('\\n')) {
+    const parts = line.split('|').map(s => s.trim());
+    if (parts.length >= 5 && parts[4] === 'review') {
+      fields.push({ field: parts[1], currentValue: parts[2], source: parts[3] });
+    }
+  }
+  return fields;
+}
+
+function showResults(reportText) {
+  const filled   = (reportText.match(/\\| filled/g)   || []).length;
+  const computed = (reportText.match(/\\| computed/g) || []).length;
+  const review   = (reportText.match(/\\| review/g)   || []).length;
+
+  document.getElementById('badge-filled').textContent   = filled;
+  document.getElementById('badge-computed').textContent = computed;
+  document.getElementById('badge-review').textContent   = review;
+
+  resultsSec.style.display = 'block';
+
+  if (review > 0) {
+    reviewPanel.style.display = 'block';
+    reviewBody.innerHTML = genState.reviewFields.map((rf, i) =>
+      '<tr>' +
+        '<td class="field-name">' + escHtml(rf.field) + '</td>' +
+        '<td class="ai-result pending" id="ai-cell-' + i + '">—</td>' +
+        '<td class="confidence" id="conf-cell-' + i + '">—</td>' +
+      '</tr>'
+    ).join('');
+  } else {
+    reviewPanel.style.display = 'none';
+    btnAi.style.display = 'none';
+  }
+
+  setStatus(
+    `✅ Generation complete.\\n${filled} filled · ${computed} computed · ${review} need review.`,
+    'done'
+  );
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Download as-is
+   ───────────────────────────────────────────────────────────────────────── */
+btnDl.addEventListener('click', () => {
+  if (!genState.docxBytes) return;
+  const blob = new Blob([genState.docxBytes], {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = genState.fileName;
+  a.click();
+});
+
+/* ─────────────────────────────────────────────────────────────────────────
+   AI Agent — local transformer QA model
+   ───────────────────────────────────────────────────────────────────────── */
+import { parseReviewFields, buildContext, loadModel, answerField } from './ai-assist.js';
+
+btnAi.addEventListener('click', async () => {
+  if (genState.reviewFields.length === 0) return;
+
+  btnAi.disabled = true;
+  btnAi.textContent = '⏳ Agent working…';
+  aiProg.style.display = 'block';
+  aiProgText.textContent = 'Loading AI model (first run ~30 s, ~80 MB download)…';
+  aiProgBar.style.width = '0%';
+
+  try {
+    // Load model
+    await loadModel((pct) => {
+      aiProgBar.style.width = Math.round(pct * 100) + '%';
+    });
+    aiProgBar.style.width = '100%';
+
+    // Build context from markdown
+    const context = buildContext(genState.protocolMd || '', genState.designMd || '', genState.prevMd || '');
+    const overrides = {};
+    const total = genState.reviewFields.length;
+
+    // Process each review field
+    for (let i = 0; i < total; i++) {
+      const rf = genState.reviewFields[i];
+      const cell = document.getElementById('ai-cell-' + i);
+      const confCell = document.getElementById('conf-cell-' + i);
+
+      aiProgText.textContent = `Field ${i + 1}/${total}: ${rf.field}…`;
+      aiProgBar.style.width = Math.round(((i) / total) * 100) + '%';
+
+      cell.textContent = '…';
+      cell.className = 'ai-result pending';
+
+      const result = await answerField(context, rf.field);
+
+      if (result && result.confidence > 0.15) {
+        cell.textContent = result.value;
+        cell.className = 'ai-result found';
+        confCell.textContent = (result.confidence * 100).toFixed(0) + '%';
+        confCell.className = 'confidence ' + (result.confidence > 0.5 ? 'high' : result.confidence > 0.25 ? 'med' : 'low');
+        overrides[rf.field] = result.value;
+      } else {
+        cell.textContent = '— not found';
+        cell.className = 'ai-result missed';
+        confCell.textContent = result ? (result.confidence * 100).toFixed(0) + '%' : '—';
+        confCell.className = 'confidence low';
+      }
+    }
+
+    aiProgBar.style.width = '100%';
+    aiProgText.textContent = 'Patching document…';
+
+    // Patch the DOCX in Pyodide
+    if (Object.keys(overrides).length > 0) {
+      const pyEnv = genState.pyEnv;
+      pyEnv.FS.writeFile('/io/in/overrides.json', JSON.stringify(overrides));
+      pyEnv.runPython(`
+import json, sys
+sys.path.insert(0, '/engine')
+from patch_docx import patch_review_tokens
+with open('/io/in/overrides.json') as f:
+    overrides = json.load(f)
+n = patch_review_tokens('/io/out/RFP.docx', overrides, '/io/out/RFP_patched.docx')
+print(f'Patched {n} tokens')
+`);
+      // Read patched docx
+      genState.docxBytes = pyEnv.FS.readFile('/io/out/RFP_patched.docx');
+      aiProgText.textContent = `✅ Agent patched ${Object.keys(overrides).length} field(s).`;
+    } else {
+      aiProgText.textContent = '✅ Agent completed — no fields could be filled.';
+    }
+
+    setStatus(
+      `✅ AI assist complete. ${Object.keys(overrides).length} field(s) filled. Ready to download.`,
+      'done'
+    );
+
+    // Switch download button text
+    btnDl.textContent = '⬇ Download AI-Enhanced RFP';
+
+  } catch (err) {
+    aiProgText.textContent = '❌ AI agent error: ' + (err?.message || String(err));
+    setStatus('❌ AI agent failed: ' + (err?.message || String(err)), 'error');
+  } finally {
+    aiProg.style.display = 'none';
+    btnAi.disabled = false;
+    btnAi.textContent = '🤖 Send to Agent';
   }
 });
 </script>
