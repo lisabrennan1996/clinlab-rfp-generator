@@ -520,63 +520,48 @@ function updateButton() {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Liteparse — WASM PDF parser
+   Web Worker — runs liteparse + Pyodide off the main thread
    ───────────────────────────────────────────────────────────────────────── */
 const BASE = new URL('.', location.href).href.replace(/\/$/, '');
-let LiteParse = null;
-let liteparseInited = false;
+const worker = new Worker(`${BASE}/worker.js`, { type: 'module' });
 
-async function initLiteparse() {
-  if (liteparseInited) return;
-  const mod = await import(`${BASE}/liteparse/liteparse_wasm.js`);
-  await mod.default(`${BASE}/liteparse/liteparse_wasm_bg.wasm`);
-  LiteParse = mod.LiteParse;
-  liteparseInited = true;
+let _callId = 0;
+const _callbacks = new Map();
+
+worker.onmessage = (e) => {
+  const { id, result, error, type } = e.data;
+  if (type === 'progress') {
+    // Forward progress updates to the UI
+    setProgress(e.data.pct || 0);
+    if (e.data.msg) setStatus(e.data.msg, 'info');
+    return;
+  }
+  const cb = _callbacks.get(id);
+  if (!cb) return;
+  _callbacks.delete(id);
+  if (error) cb.reject(new Error(error));
+  else cb.resolve(result);
+};
+
+function callWorker(cmd, args = {}) {
+  return new Promise((resolve, reject) => {
+    const id = ++_callId;
+    _callbacks.set(id, { resolve, reject });
+    worker.postMessage({ id, cmd, args });
+  });
 }
 
 async function parsePDF(file) {
   if (!file) return '';
-  await initLiteparse();
-  const parser = new LiteParse({ outputFormat: 'markdown', ocrEnabled: false });
-  const bytes  = new Uint8Array(await file.arrayBuffer());
-  const result = await parser.parse(bytes);
-  return result.text + '\\n' + JSON.stringify({
-    pages: result.pages.map(p => ({
-      page: p.pageNumber, width: p.width, height: p.height,
-      text: p.items.map(i => i.text).join(' '),
-      textItems: p.items.map(i => ({
-        text: i.text, x: i.bbox[0], y: i.bbox[1],
-        width: i.bbox[2] - i.bbox[0], height: i.bbox[3] - i.bbox[1],
-      })),
-    })),
-  }, null, 2);
+  const buf = await file.arrayBuffer();
+  return callWorker('parsePDF', { data: buf });
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Pyodide — Python in WASM
+   Pyodide helper — communicates via Web Worker
    ───────────────────────────────────────────────────────────────────────── */
-let py = null;
-
 async function bootPyodide() {
-  if (py) return py;
-  const indexURL = window.PYODIDE_INDEX_URL || './pyodide/';
-  await new Promise((res, rej) => {
-    const s = document.createElement('script');
-    s.src = indexURL + 'pyodide.js';
-    s.onload  = res;
-    s.onerror = () => rej(new Error('Failed to load Pyodide. Check your network / CSP settings.'));
-    document.head.appendChild(s);
-  });
-  py = await loadPyodide({ indexURL });
-  await py.loadPackage(['micropip', 'lxml']);
-  await py.runPythonAsync(`import micropip; await micropip.install('python-docx')`);
-  py.FS.mkdir('/engine');
-  for (const m of ['build_soa','build_specimen','build_analytes','populate_rfp','patch_docx']) {
-    const src = await (await fetch(`${BASE}/engine/${m}.py`)).text();
-    py.FS.writeFile(`/engine/${m}.py`, src);
-  }
-  py.runPython(`import sys; sys.path.insert(0, '/engine')`);
-  return py;
+  return callWorker('bootPyodide');
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -615,23 +600,23 @@ btn.addEventListener('click', async () => {
     setProgress(35);
 
     setStatus('Loading Python runtime (first run ~30 s)…', 'info'); setProgress(40);
-    const pyEnv = await bootPyodide();
+    await bootPyodide();
     setProgress(65);
 
     setStatus('Generating RFP…', 'info'); setProgress(70);
     const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
-    pyEnv.FS.mkdirTree('/io/in');
-    pyEnv.FS.mkdirTree('/io/out');
-    pyEnv.FS.writeFile('/io/in/protocol.md',     protocolMd);
-    pyEnv.FS.writeFile('/io/in/design.md',       designMd);
-    pyEnv.FS.writeFile('/io/in/previous_rfp.md', prevMd);
-    pyEnv.FS.writeFile('/io/in/template.docx',   templateBytes);
+    await callWorker('mkdir', { path: '/io/in' });
+    await callWorker('mkdir', { path: '/io/out' });
+    await callWorker('writeFile', { path: '/io/in/protocol.md', data: protocolMd });
+    await callWorker('writeFile', { path: '/io/in/design.md', data: designMd });
+    await callWorker('writeFile', { path: '/io/in/previous_rfp.md', data: prevMd });
+    await callWorker('writeFile', { path: '/io/in/template.docx', data: templateBytes });
     // Store markdown for AI agent
     genState.protocolMd = protocolMd;
     genState.designMd   = designMd;
     genState.prevMd     = prevMd;
 
-    pyEnv.runPython(`
+    await callWorker('runPython', { code: `
 import os, importlib
 os.environ.update({
   "RFP_INPUT_DIR":  "/io/in",
@@ -646,18 +631,20 @@ os.environ.update({
 })
 import populate_rfp
 importlib.reload(populate_rfp)
-`);
+` });
     setProgress(90);
 
-    const docx   = pyEnv.FS.readFile('/io/out/RFP.docx');
-    const report = new TextDecoder().decode(pyEnv.FS.readFile('/io/out/report.md'));
+    const docxBytes = await callWorker('readFile', { path: '/io/out/RFP.docx' });
+    const reportBytes = await callWorker('readFile', { path: '/io/out/report.md' });
+    const docx   = new Uint8Array(docxBytes);
+    const report = new TextDecoder().decode(reportBytes);
     const name   = `Central_Laboratory_RFP_${new Date().toISOString().slice(0, 10)}.docx`;
 
     // Store state
     genState.docxBytes   = docx;
     genState.reportText  = report;
     genState.fileName    = name;
-    genState.pyEnv       = pyEnv;
+    
     genState.reviewFields = parseReviewFields(report);
 
     // Show results section
@@ -792,11 +779,10 @@ btnAi.addEventListener('click', async () => {
     aiProgBar.style.width = '100%';
     aiProgText.textContent = 'Patching document…';
 
-    // Patch the DOCX in Pyodide
+    // Patch the DOCX in the worker
     if (Object.keys(overrides).length > 0) {
-      const pyEnv = genState.pyEnv;
-      pyEnv.FS.writeFile('/io/in/overrides.json', JSON.stringify(overrides));
-      pyEnv.runPython(`
+      await callWorker('writeFile', { path: '/io/in/overrides.json', data: JSON.stringify(overrides) });
+      await callWorker('runPython', { code: `
 import json, sys
 sys.path.insert(0, '/engine')
 from patch_docx import patch_review_tokens
@@ -804,9 +790,9 @@ with open('/io/in/overrides.json') as f:
     overrides = json.load(f)
 n = patch_review_tokens('/io/out/RFP.docx', overrides, '/io/out/RFP_patched.docx')
 print(f'Patched {n} tokens')
-`);
-      // Read patched docx
-      genState.docxBytes = pyEnv.FS.readFile('/io/out/RFP_patched.docx');
+` });
+      const patched = await callWorker('readFile', { path: '/io/out/RFP_patched.docx' });
+      genState.docxBytes = new Uint8Array(patched);
       aiProgText.textContent = `✅ Agent patched ${Object.keys(overrides).length} field(s).`;
     } else {
       aiProgText.textContent = '✅ Agent completed — no fields could be filled.';

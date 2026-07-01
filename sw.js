@@ -7,6 +7,7 @@ const PRECACHE = [
   'icons/icon-512.png',
   'manifest.json',
   'ai-assist.js',
+  'worker.js',
   'engine/build_analytes.py',
   'engine/build_soa.py',
   'engine/build_specimen.py',
