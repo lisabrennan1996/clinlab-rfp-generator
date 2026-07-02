@@ -20,6 +20,7 @@ a = Analysis(
         ('ui', 'ui'),
         ('engine', 'engine'),
         ('agent.py', '.'),
+        ('template.docx', '.'),
     ],
     hiddenimports=[
         'liteparse',

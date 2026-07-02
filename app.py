@@ -22,7 +22,13 @@ class API:
         self._agent = None
         self._tasks = {}
         self._lock = threading.Lock()
-        self._parse_count = 0  # track how many PDFs parsed
+        self._parse_count = 0
+        # Auto-load bundled template
+        bundled = Path(__file__).parent / 'template.docx'
+        if bundled.exists():
+            self.template = bundled.read_bytes()
+            self.template_name = bundled.name
+            logger.info('Bundled template loaded: %s (%d KB)', bundled.name, len(self.template)//1024)
 
     # ── Task system (threaded) ──
     def _new_task(self, target, args=(), kwargs=None):

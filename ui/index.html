@@ -125,11 +125,11 @@ button.primary:hover:not(:disabled) { background: #b71c1c; }
 
 <div class="field-header">RFP Template</div>
 
-<div class="template-zone" id="dz-template" onclick="document.getElementById('f-template').click()">
-  <span class="drop-zone-label">📄 Blank RFP Template (.docx)</span>
-  <span class="drop-zone-hint">The Word document with table structure to fill</span>
-  <div class="drop-zone-status" id="s-template"></div>
-  <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+<div class="template-zone has-file" id="dz-template" onclick="document.getElementById('f-template').click()">
+  <span class="drop-zone-label">📄 RFP Template</span>
+  <span class="drop-zone-hint">Click to override with a different template (optional)</span>
+  <div class="drop-zone-status done" id="s-template">✓ Bundled template loaded (rfp template.docx)</div>
+  <input type="file" id="f-template" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
 </div>
 
 <div id="log">Ready. Upload PDFs to begin.</div>
@@ -241,6 +241,9 @@ window.onload = async () => {
     }
     updateNextButton();
   }
+
+  // Template is bundled - enable Next button immediately
+  updateNextButton();
 
   function updateNextButton() {
     // Enable if at least one document has been parsed OR template loaded
